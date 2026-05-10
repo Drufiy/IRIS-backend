@@ -17,7 +17,7 @@ def main():
     if mean > 0.5:
         status = "elevated"
     print(f"Status: {status}")
-    result = scores.mean()  # list has no .mean() — AttributeError
+    result = np.mean(scores)
     print(f"Result: {result}")
 
 if __name__ == "__main__":
