@@ -14,10 +14,11 @@ def main():
     mean, std = compute_stats(scores)
     logging.info(f"Mean: {mean:.2f}, Std: {std:.2f}")
     status = "active"
-    threshold = np.float128(0.5)  # np.float128 removed in NumPy 2.0
-    if mean > threshold:
+    if mean > 0.5:
         status = "elevated"
     print(f"Status: {status}")
+    result = scores.mean()  # list has no .mean() — AttributeError
+    print(f"Result: {result}")
 
 if __name__ == "__main__":
     main()
