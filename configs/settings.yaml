@@ -1,0 +1,43 @@
+llm:
+  default_model: "deepseek-flash"    # Default for general tasks
+  offline_mode: false                # Set true to force qwen2.5:7b for all tasks
+  task_routing:
+    plan:   "deepseek-flash"
+    chat:   "deepseek-flash"
+    code:   "deepseek-pro"
+    reason: "deepseek-pro"
+    local:  "qwen2.5:7b"
+    memory: "qwen2.5:7b"
+
+ollama:
+  host: "http://localhost:11434"
+  model: "qwen2.5:7b"               # Pull with: ollama pull qwen2.5:7b
+
+memory:
+  chroma_path: "~/.iris/memory/chroma"
+  embedding_model: "BAAI/bge-m3"
+  short_term_limit: 20              # Max messages in session buffer
+  top_k_retrieval: 5                # Semantic search results injected into prompt
+
+audio:
+  sample_rate: 16000
+  channels: 1
+  dtype: "float32"
+  wake_words: ["jarvis", "iris"]
+
+voice:
+  elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"   # Rachel (default ElevenLabs voice)
+  elevenlabs_model: "eleven_turbo_v2"
+  stream: true
+
+ui:
+  ipc_port: 7788
+  outline_width: 3                  # px
+
+browser:
+  headless: false
+  credentials_path: "~/.iris/credentials.enc"
+
+logging:
+  level: "DEBUG"
+  log_file: "logs/iris.log"

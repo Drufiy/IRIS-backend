@@ -1,3 +1,45 @@
-numpy>=1.24
-opencv-python>=4.8
-PyAudio>=0.2.13
+# Audio
+sounddevice>=0.4.6
+openwakeword>=0.6.0
+faster-whisper>=1.0.0
+numpy>=1.24.0
+pyaudio>=0.2.13
+pydub>=0.25.1
+
+# LLM
+httpx>=0.27.0          # DeepSeek API calls
+ollama>=0.2.0          # Ollama Python client (Qwen2.5 local)
+
+# Embeddings + Memory
+sentence-transformers>=3.0.0    # BGE-M3
+chromadb>=0.5.0                 # Vector store
+networkx>=3.0                   # Knowledge graph
+
+# TTS
+elevenlabs>=1.0.0
+
+# Actions / OS
+mss>=9.0.0             # Screenshots (cross-platform)
+easyocr>=1.7.0         # OCR
+pyperclip>=1.8.2       # Clipboard
+pygetwindow>=0.0.9     # Window management (Windows)
+pywinauto>=0.6.8       # Windows automation
+pyobjc>=10.0           # macOS bindings (macOS only)
+
+# Browser
+playwright>=1.44.0
+
+# UI / IPC
+websockets>=12.0
+
+# Utils
+pydantic>=2.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+loguru>=0.7.0
+aiofiles>=23.0
+cryptography>=42.0     # Credential encryption
+
+# Dev / Testing
+pytest>=8.0
+pytest-asyncio>=0.23.0

@@ -1,4 +1,46 @@
-venv/
+# API keys — NEVER COMMIT
+configs/keys.env
+
+# Python
 __pycache__/
-*.log
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# IRIS runtime data
+.chroma/
+*.index
+logs/
+~/.iris/
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tauri / Rust build artifacts
+ui/tauri-app/src-tauri/target/
+ui/tauri-app/node_modules/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
