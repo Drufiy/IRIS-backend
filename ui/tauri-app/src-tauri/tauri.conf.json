@@ -1,9 +1,12 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "IRIS",
+  "version": "0.1.0",
+  "identifier": "com.iris.overlay",
   "build": {
-    "distDir": "../",
-    "devPath": "../index.html"
+    "frontendDist": ".."
   },
-  "tauri": {
+  "app": {
     "windows": [
       {
         "fullscreen": true,
@@ -11,11 +14,12 @@
         "alwaysOnTop": true,
         "decorations": false,
         "skipTaskbar": true,
-        "title": "IRIS"
+        "title": "IRIS",
+        "label": "main"
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ws://localhost:7788; script-src 'self'"
+      "csp": "default-src 'self'; connect-src 'self' ws://localhost:7788; script-src 'self' 'unsafe-inline'"
     }
   }
 }
