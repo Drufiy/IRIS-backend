@@ -1,0 +1,21 @@
+{
+  "build": {
+    "distDir": "../",
+    "devPath": "../index.html"
+  },
+  "tauri": {
+    "windows": [
+      {
+        "fullscreen": true,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "decorations": false,
+        "skipTaskbar": true,
+        "title": "IRIS"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' ws://localhost:7788; script-src 'self'"
+    }
+  }
+}
