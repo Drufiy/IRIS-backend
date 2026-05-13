@@ -1,6 +1,7 @@
 llm:
   default_model: "deepseek-flash"    # Default for general tasks
   offline_mode: false                # Set true to force qwen2.5:7b for all tasks
+  offline_fallback_model: "qwen2.5:7b"
   task_routing:
     plan:   "deepseek-flash"
     chat:   "deepseek-flash"
@@ -18,6 +19,7 @@ memory:
   embedding_model: "BAAI/bge-m3"
   short_term_limit: 20              # Max messages in session buffer
   top_k_retrieval: 5                # Semantic search results injected into prompt
+  habit_retrieval_limit: 3
 
 audio:
   sample_rate: 16000

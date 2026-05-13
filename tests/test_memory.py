@@ -24,6 +24,7 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             config = {
                 "short_term_limit": 5,
                 "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
                 "chroma_path": str(Path(tmp) / ".chroma"),
                 "embedding_model": "BAAI/bge-m3",
                 "long_term_path": str(Path(tmp) / "memory.json"),
@@ -39,3 +40,23 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             prompt = await manager.inject_into_prompt([{"role": "user", "content": "use offline models"}])
             self.assertEqual(prompt[0]["role"], "system")
             self.assertIn("Relevant memory context", prompt[0]["content"])
+
+    async def test_memory_manager_learns_habits_and_graph_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+            await manager.learn_habit("open music", "launch spotify")
+            await manager.store("user", "Aryan discussed ProjectIris planning", tags=["planning"])
+
+            context = await manager.retrieve_context("please open music")
+            self.assertTrue(any(item["metadata"].get("type") == "habit" for item in context))
+
+            graph_context = await manager.retrieve_context("ProjectIris")
+            self.assertTrue(any(item["metadata"].get("type") == "graph" for item in graph_context))
