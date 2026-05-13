@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from browser.browser_agent import BrowserAgent
+from browser.login_handler import LoginHandler
 from browser.scraper import ContentScraper
 
 
@@ -58,3 +62,38 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         scraper = ContentScraper()
         cleaned = scraper.clean_text("<p>Hello</p>\n<p>world</p>")
         self.assertEqual(cleaned, "Hello world")
+
+    async def test_login_handler_encrypts_and_loads_credentials(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            credentials_path = Path(tmp) / "credentials.json"
+            handler = LoginHandler(str(credentials_path), secret="super-secret")
+
+            await handler.save_credentials(
+                "github",
+                {"username": "aryan", "password": "token-123"},
+            )
+
+            raw = json.loads(credentials_path.read_text(encoding="utf-8"))
+            self.assertIn("services", raw)
+            self.assertNotIn("username", credentials_path.read_text(encoding="utf-8"))
+
+            loaded = await handler.load_credentials("github")
+            self.assertEqual(loaded["username"], "aryan")
+            self.assertEqual(loaded["password"], "token-123")
+
+    async def test_login_handler_applies_credentials_to_browser(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            credentials_path = Path(tmp) / "credentials.json"
+            handler = LoginHandler(str(credentials_path), secret="super-secret")
+            await handler.save_credentials(
+                "github",
+                {"username": "aryan", "password": "token-123"},
+            )
+
+            page = FakePage()
+            agent = BrowserAgent(page=page)
+            await handler.login(agent, "github", "#user", "#pass", "#submit")
+
+            self.assertIn(("fill", "#user", "aryan"), page.actions)
+            self.assertIn(("fill", "#pass", "token-123"), page.actions)
+            self.assertIn(("click", "#submit", None), page.actions)
