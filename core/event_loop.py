@@ -50,26 +50,74 @@ class IRISEventLoop:
     # ── Mic pipeline ──────────────────────────────────────────────────────────
 
     async def _mic_loop(self) -> None:
-        """Continuously pull chunks from the mic listener and process them."""
+        """
+        Continuously pull audio and run ASR-based wake word / command detection.
+
+        Pipeline:
+          IDLE       → buffer 1.5 s of audio, run ASR, check for 'iris'/'jarvis'
+          INTERACTIVE → buffer up to 4 s (or until 0.8 s of silence), then transcribe
+        """
+        import numpy as np
         from audio.listener import MicListener
+
         listener = MicListener()
-        listener.start()
+        # Start the blocking sounddevice stream off the event loop
+        await asyncio.to_thread(listener.start)
         logger.info("Mic listener started")
+
+        IDLE_CHUNKS          = 15    # 15 × 100 ms = 1.5 s for wake-word scan
+        MAX_CMD_CHUNKS       = 40    # 4 s max command buffer
+        SILENCE_ENERGY_THRESH = 5e-4 # RMS below this = silence
+        SILENCE_CHUNKS_NEEDED = 8    # 0.8 s of silence ends an utterance
+
+        buffer: list = []
+        silence_run = 0
 
         try:
             while True:
-                chunk = listener.get_chunk()
-                if chunk is not None:
-                    self.wake.process_chunk(chunk)
+                chunk = await asyncio.to_thread(listener.get_chunk)
+                if chunk is None:
+                    await asyncio.sleep(0.02)
+                    continue
 
-                    if self.state.current == IRISState.INTERACTIVE:
-                        result = await self.asr.transcribe(chunk)
-                        if result.get("transcript"):
-                            await self._handle_transcript(result["transcript"])
+                chunk_np = np.asarray(chunk, dtype=np.float32)
+                buffer.append(chunk_np)
 
-                await asyncio.sleep(0.01)
+                if self.state.current == IRISState.IDLE:
+                    # Accumulate 1.5 s then scan for wake word via ASR text match
+                    if len(buffer) >= IDLE_CHUNKS:
+                        audio = np.concatenate(buffer)
+                        buffer = []
+                        result = await self.asr.transcribe(audio)
+                        text = result.get("transcript", "").strip()
+                        if text:
+                            logger.debug(f"[IDLE ASR] {text!r}")
+                            await self.wake.process_text(text)
+
+                elif self.state.current == IRISState.INTERACTIVE:
+                    # Track silence to detect end-of-utterance
+                    rms = float(np.sqrt(np.mean(chunk_np ** 2)))
+                    if rms < SILENCE_ENERGY_THRESH:
+                        silence_run += 1
+                    else:
+                        silence_run = 0
+
+                    utterance_done = (
+                        silence_run >= SILENCE_CHUNKS_NEEDED
+                        or len(buffer) >= MAX_CMD_CHUNKS
+                    )
+                    if utterance_done and len(buffer) > SILENCE_CHUNKS_NEEDED:
+                        audio = np.concatenate(buffer)
+                        buffer = []
+                        silence_run = 0
+                        result = await self.asr.transcribe(audio)
+                        text = result.get("transcript", "").strip()
+                        if text:
+                            logger.info(f"[INTERACTIVE ASR] {text!r}")
+                            await self._handle_transcript(text)
+
         finally:
-            listener.stop()
+            await asyncio.to_thread(listener.stop)
 
     def _on_wake(self, word: str) -> None:
         """Callback fired by WakeWordDetector on detection."""

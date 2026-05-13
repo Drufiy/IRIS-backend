@@ -58,7 +58,9 @@ async def main() -> None:
 
     try:
         from audio.asr import ASREngine
-        asr = ASREngine()
+        from audio.faster_whisper_backend import FasterWhisperBackend
+        asr = ASREngine(backend=FasterWhisperBackend(model_size="tiny", device="cpu", compute_type="int8"))
+        log.info("ASR: FasterWhisper tiny loaded")
     except Exception as e:
         log.warning(f"ASR failed to init: {e} — using stub")
         asr = _StubASR()
