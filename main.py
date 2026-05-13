@@ -86,7 +86,7 @@ async def main() -> None:
 
     try:
         from agents.coding_agent import CodingAgent
-        coding = CodingAgent(llm)
+        coding = CodingAgent(llm, state_manager=state, action_router=actions)
     except Exception as e:
         log.warning(f"Coding agent failed to init: {e} — using stub")
         coding = _StubCoding()
