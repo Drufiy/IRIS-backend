@@ -23,7 +23,6 @@ easyocr>=1.7.0         # OCR
 pyperclip>=1.8.2       # Clipboard
 pygetwindow>=0.0.9     # Window management (Windows)
 pywinauto>=0.6.8       # Windows automation
-pyobjc>=10.0           # macOS bindings (macOS only)
 
 # Browser
 playwright>=1.44.0

@@ -23,8 +23,10 @@ def load_config(settings_path: str = "configs/settings.yaml") -> dict:
     # Inject API keys from environment into config
     config.setdefault("llm", {})
     config.setdefault("voice", {})
+    config.setdefault("asr", {})
 
     config["llm"]["deepseek_api_key"] = os.getenv("DEEPSEEK_API_KEY", "")
     config["voice"]["elevenlabs_api_key"] = os.getenv("ELEVENLABS_API_KEY", "")
+    config["asr"]["groq_api_key"] = os.getenv("GROQ_API_KEY", "")
 
     return config

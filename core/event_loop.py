@@ -1,15 +1,22 @@
 """Main async event brain for IRIS."""
 
 import asyncio
+
 from loguru import logger
+
 from core.state_manager import IRISState
+
+try:
+    import numpy as np
+except ImportError:  # pragma: no cover - exercised only in dependency-light environments
+    np = None
 
 INTERRUPT_PHRASES = ["stop", "cancel", "enough", "shut up", "pause"]
 
 
 class IRISEventLoop:
     """
-    Orchestrates the mic → wake word → ASR → LLM → TTS → UI pipeline.
+    Orchestrates the mic -> wake word -> ASR -> LLM -> TTS -> UI pipeline.
 
     Dependencies injected at construction so each can be tested independently.
     Aryan's modules (asr, wake, memory) are consumed via their interface contract.
@@ -17,24 +24,24 @@ class IRISEventLoop:
 
     def __init__(
         self,
-        state,        # StateManager
-        asr,          # ASREngine  (Aryan)
-        wake,         # WakeWordDetector  (Aryan)
-        interrupt,    # InterruptHandler  (Aryan)
-        tts,          # TTSRouter  (Aradhya)
-        agent_manager,# AgentManager  (Aradhya)
-        memory,       # MemoryManager  (Aryan)
-        ipc,          # IPCBridge  (Aradhya)
+        state,
+        asr,
+        wake,
+        interrupt,
+        tts,
+        agent_manager,
+        memory,
+        ipc,
     ) -> None:
-        self.state         = state
-        self.asr           = asr
-        self.wake          = wake
-        self.interrupt     = interrupt
-        self.tts           = tts
-        self.agents        = agent_manager
-        self.memory        = memory
-        self.ipc           = ipc
-        self._task_queue   = asyncio.Queue()
+        self.state = state
+        self.asr = asr
+        self.wake = wake
+        self.interrupt = interrupt
+        self.tts = tts
+        self.agents = agent_manager
+        self.memory = memory
+        self.ipc = ipc
+        self._task_queue = asyncio.Queue()
         self._current_task = None
 
     async def run(self) -> None:
@@ -47,30 +54,29 @@ class IRISEventLoop:
             self._task_worker(),
         )
 
-    # ── Mic pipeline ──────────────────────────────────────────────────────────
-
     async def _mic_loop(self) -> None:
         """
         Continuously pull audio and run ASR-based wake word / command detection.
 
         Pipeline:
-          IDLE       → buffer 1.5 s of audio, run ASR, check for 'iris'/'jarvis'
-          INTERACTIVE → buffer up to 4 s (or until 0.8 s of silence), then transcribe
+          IDLE -> buffer 3 s of audio, run ASR, check for 'iris'/'jarvis'
+          INTERACTIVE -> buffer up to 4 s (or until 0.8 s of silence), then transcribe
         """
-        import numpy as np
         from audio.listener import MicListener
 
+        if np is None:
+            raise RuntimeError("numpy is required for microphone buffering.")
+
         listener = MicListener()
-        # Start the blocking sounddevice stream off the event loop
         await asyncio.to_thread(listener.start)
         logger.info("Mic listener started")
 
-        IDLE_CHUNKS          = 15    # 15 × 100 ms = 1.5 s for wake-word scan
-        MAX_CMD_CHUNKS       = 40    # 4 s max command buffer
-        SILENCE_ENERGY_THRESH = 5e-4 # RMS below this = silence
-        SILENCE_CHUNKS_NEEDED = 8    # 0.8 s of silence ends an utterance
+        IDLE_CHUNKS = 30
+        MAX_CMD_CHUNKS = 40
+        SILENCE_ENERGY_THRESH = 5e-4
+        SILENCE_CHUNKS_NEEDED = 8
 
-        buffer: list = []
+        buffer = []
         silence_run = 0
 
         try:
@@ -84,18 +90,20 @@ class IRISEventLoop:
                 buffer.append(chunk_np)
 
                 if self.state.current == IRISState.IDLE:
-                    # Accumulate 1.5 s then scan for wake word via ASR text match
                     if len(buffer) >= IDLE_CHUNKS:
                         audio = np.concatenate(buffer)
                         buffer = []
+                        rms = float(np.sqrt(np.mean(audio ** 2)))
+                        if rms < 1e-3:
+                            continue
+
                         result = await self.asr.transcribe(audio)
                         text = result.get("transcript", "").strip()
                         if text:
-                            logger.debug(f"[IDLE ASR] {text!r}")
+                            logger.info(f"[IDLE ASR] '{text}'")
                             await self.wake.process_text(text)
 
                 elif self.state.current == IRISState.INTERACTIVE:
-                    # Track silence to detect end-of-utterance
                     rms = float(np.sqrt(np.mean(chunk_np ** 2)))
                     if rms < SILENCE_ENERGY_THRESH:
                         silence_run += 1
@@ -113,8 +121,11 @@ class IRISEventLoop:
                         result = await self.asr.transcribe(audio)
                         text = result.get("transcript", "").strip()
                         if text:
-                            logger.info(f"[INTERACTIVE ASR] {text!r}")
+                            logger.info(f"[INTERACTIVE ASR] '{text}'")
                             await self._handle_transcript(text)
+                else:
+                    buffer = []
+                    silence_run = 0
 
         finally:
             await asyncio.to_thread(listener.stop)
@@ -126,14 +137,12 @@ class IRISEventLoop:
 
     async def _handle_transcript(self, text: str) -> None:
         """Route transcript: interrupts take priority, rest go to task queue."""
-        if any(p in text.lower() for p in INTERRUPT_PHRASES):
+        if any(phrase in text.lower() for phrase in INTERRUPT_PHRASES):
             logger.info(f"Interrupt detected: '{text}'")
             await self._stop()
             return
         logger.info(f"Transcript queued: '{text}'")
         await self._task_queue.put(text)
-
-    # ── Task worker ───────────────────────────────────────────────────────────
 
     async def _task_worker(self) -> None:
         """Pull goals from the queue, run agents, speak response."""
@@ -153,14 +162,12 @@ class IRISEventLoop:
                 await self.tts.speak(response)
             except asyncio.CancelledError:
                 logger.info("Task cancelled mid-execution")
-            except Exception as e:
-                logger.error(f"Task worker error: {e}")
+            except Exception as exc:
+                logger.error(f"Task worker error: {exc}")
                 await self.tts.speak("Sorry, something went wrong.")
             finally:
                 self._current_task = None
-                await self.state.transition(IRISState.INTERACTIVE)
-
-    # ── Interrupt ─────────────────────────────────────────────────────────────
+                await self.state.transition(IRISState.IDLE)
 
     async def _stop(self) -> None:
         """Stop TTS, cancel running task, transition to STOPPING."""

@@ -29,36 +29,32 @@ class StaticProvider(BaseLLMProvider):
 
 
 class LLMRouterTests(unittest.IsolatedAsyncioTestCase):
-    async def test_complete_falls_back_to_local_provider(self) -> None:
+    async def test_complete_raises_when_provider_fails(self) -> None:
         router = LLMRouter(
             {
                 "default_model": "deepseek-flash",
-                "offline_fallback_model": "qwen2.5:7b",
                 "task_routing": {"chat": "deepseek-flash"},
             },
             providers={
                 "deepseek-flash": FailingProvider(),
                 "deepseek-pro": FailingProvider(),
-                "qwen2.5:7b": StaticProvider("local reply"),
             },
         )
-        result = await router.complete([{"role": "user", "content": "hi"}], task_type="chat")
-        self.assertEqual(result, "local reply")
+        with self.assertRaisesRegex(RuntimeError, "network down"):
+            await router.complete([{"role": "user", "content": "hi"}], task_type="chat")
 
-    async def test_stream_uses_offline_mode_directly(self) -> None:
+    async def test_stream_uses_deepseek_provider_directly(self) -> None:
         router = LLMRouter(
             {
                 "default_model": "deepseek-flash",
-                "offline_mode": True,
-                "offline_fallback_model": "qwen2.5:7b",
+                "task_routing": {"chat": "deepseek-flash"},
             },
             providers={
-                "deepseek-flash": FailingProvider(),
+                "deepseek-flash": StaticProvider("stream reply"),
                 "deepseek-pro": FailingProvider(),
-                "qwen2.5:7b": StaticProvider("offline stream"),
             },
         )
         chunks = []
-        async for chunk in router.stream([{"role": "user", "content": "hi"}]):
+        async for chunk in router.stream([{"role": "user", "content": "hi"}], task_type="chat"):
             chunks.append(chunk)
-        self.assertEqual("".join(chunks), "offline stream")
+        self.assertEqual("".join(chunks), "stream reply")

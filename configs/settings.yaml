@@ -1,18 +1,12 @@
 llm:
   default_model: "deepseek-flash"    # Default for general tasks
-  offline_mode: false                # Set true to force qwen2.5:7b for all tasks
-  offline_fallback_model: "qwen2.5:7b"
   task_routing:
     plan:   "deepseek-flash"
     chat:   "deepseek-flash"
     code:   "deepseek-pro"
     reason: "deepseek-pro"
-    local:  "qwen2.5:7b"
-    memory: "qwen2.5:7b"
-
-ollama:
-  host: "http://localhost:11434"
-  model: "qwen2.5:7b"               # Pull with: ollama pull qwen2.5:7b
+    local:  "deepseek-flash"
+    memory: "deepseek-flash"
 
 memory:
   chroma_path: "~/.iris/memory/chroma"
@@ -26,6 +20,9 @@ audio:
   channels: 1
   dtype: "float32"
   wake_words: ["jarvis", "iris"]
+
+asr:
+  model: "whisper-large-v3-turbo"
 
 voice:
   elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"   # Rachel (default ElevenLabs voice)

@@ -1,24 +1,17 @@
-"""IRIS — single entrypoint. Boots all modules and starts the event loop."""
+"""IRIS single entrypoint. Boots all modules and starts the event loop."""
 
 import asyncio
-import httpx
+
+from actions.action_router import ActionRouter
+from audio.asr import ASREngine
+from audio.groq_whisper_backend import GroqWhisperBackend
+from core.event_loop import IRISEventLoop
+from core.state_manager import StateManager
+from llm.router import LLMRouter
+from ui.ipc_bridge import IPCBridge
 from utils.config import load_config
 from utils.logger import setup_logger
-from ui.ipc_bridge import IPCBridge
-from core.state_manager import StateManager
-from core.event_loop import IRISEventLoop
 from voice.tts_router import TTSRouter
-from actions.action_router import ActionRouter
-
-
-async def _check_ollama(host: str) -> bool:
-    """Health check: verify Ollama is running before boot."""
-    try:
-        async with httpx.AsyncClient() as client:
-            r = await client.get(f"{host}/api/tags", timeout=5)
-            return r.status_code == 200
-    except Exception:
-        return False
 
 
 async def main() -> None:
@@ -29,73 +22,68 @@ async def main() -> None:
     )
     log.info("IRIS booting...")
 
-    # Ollama health check
-    ollama_host = config.get("ollama", {}).get("host", "http://localhost:11434")
-    if not await _check_ollama(ollama_host):
-        log.warning(f"Ollama not reachable at {ollama_host} — local model will be unavailable")
-
-    # ── Init modules ──────────────────────────────────────────────────────────
-
     ipc = IPCBridge(port=config["ui"]["ipc_port"])
     state = StateManager(ipc)
     tts = TTSRouter(config["voice"])
     actions = ActionRouter(ipc)
 
-    # Aryan's modules — import with graceful fallback stubs for solo testing
-    try:
-        from llm.router import LLMRouter
-        llm = LLMRouter(config["llm"])
-    except Exception as e:
-        log.warning(f"LLM router failed to init: {e} — using stub")
-        llm = _StubLLM()
+    if not config["llm"].get("deepseek_api_key"):
+        raise RuntimeError("DeepSeek API key is not configured.")
+    llm = LLMRouter(config["llm"])
 
     try:
         from memory.memory_manager import MemoryManager
+
         memory = MemoryManager(config["memory"])
-    except Exception as e:
-        log.warning(f"Memory manager failed to init: {e} — using stub")
+    except Exception as exc:
+        log.warning(f"Memory manager failed to init: {exc} - using stub")
         memory = _StubMemory()
 
-    try:
-        from audio.asr import ASREngine
-        from audio.faster_whisper_backend import FasterWhisperBackend
-        asr = ASREngine(backend=FasterWhisperBackend(model_size="tiny", device="cpu", compute_type="int8"))
-        log.info("ASR: FasterWhisper tiny loaded")
-    except Exception as e:
-        log.warning(f"ASR failed to init: {e} — using stub")
-        asr = _StubASR()
+    if not config["asr"].get("groq_api_key"):
+        raise RuntimeError("Groq API key is not configured.")
+    asr = ASREngine(
+        backend=GroqWhisperBackend(
+            api_key=config["asr"]["groq_api_key"],
+            model=config["asr"].get("model", "whisper-large-v3-turbo"),
+        )
+    )
+    log.info("ASR: Groq Whisper cloud loaded")
 
     try:
         from audio.wake_word import WakeWordDetector
+
         wake = WakeWordDetector()
-    except Exception as e:
-        log.warning(f"Wake word detector failed to init: {e} — using stub")
+    except Exception as exc:
+        log.warning(f"Wake word detector failed to init: {exc} - using stub")
         wake = _StubWake()
 
     try:
         from audio.interrupt_handler import InterruptHandler
+
         interrupt = InterruptHandler()
-    except Exception as e:
-        log.warning(f"Interrupt handler failed to init: {e} — using stub")
+    except Exception as exc:
+        log.warning(f"Interrupt handler failed to init: {exc} - using stub")
         interrupt = None
 
     try:
         from browser.browser_agent import BrowserAgent
+
         browser = BrowserAgent()
-    except Exception as e:
-        log.warning(f"Browser agent failed to init: {e} — using stub")
+    except Exception as exc:
+        log.warning(f"Browser agent failed to init: {exc} - using stub")
         browser = _StubBrowser()
 
     try:
         from agents.coding_agent import CodingAgent
+
         coding = CodingAgent(llm, state_manager=state, action_router=actions)
-    except Exception as e:
-        log.warning(f"Coding agent failed to init: {e} — using stub")
+    except Exception as exc:
+        log.warning(f"Coding agent failed to init: {exc} - using stub")
         coding = _StubCoding()
 
     from agents.agent_manager import AgentManager
-    agents = AgentManager(llm, memory, actions, browser, coding, tts)
 
+    agents = AgentManager(llm, memory, actions, browser, coding, tts)
     loop = IRISEventLoop(state, asr, wake, interrupt, tts, agents, memory, ipc)
 
     log.info("IRIS ready. Say 'Jarvis' or 'Iris' to begin.")
@@ -105,41 +93,41 @@ async def main() -> None:
     )
 
 
-# ── Stubs for Aryan's modules (allow Aradhya to test independently) ──────────
-
-class _StubLLM:
-    async def complete(self, messages, system="", task_type="chat"):
-        return '[{"id":1,"action_type":"voice","description":"LLM not available yet","params":{"question":"LLM module not connected."}}]'
-    async def stream(self, messages, system="", task_type="chat"):
-        yield "LLM not available"
-
 class _StubMemory:
     async def inject_into_prompt(self, base_messages):
         return base_messages
+
     async def store(self, role, content, tags=None):
         pass
+
     async def retrieve_context(self, query, top_k=5):
         return []
 
-class _StubASR:
-    async def transcribe(self, audio):
-        return {"transcript": "", "language": "en", "confidence": 0.0}
 
 class _StubWake:
     def on_wake(self, callback):
         pass
+
     def process_chunk(self, chunk):
         return False
+
+    async def process_text(self, text):
+        return None
+
 
 class _StubBrowser:
     async def start(self, headless=False):
         pass
+
     async def navigate(self, url):
         return url
+
     async def extract_text(self, selector="body"):
         return ""
+
     async def close(self):
         pass
+
 
 class _StubCoding:
     async def run(self, goal, repo_path):
