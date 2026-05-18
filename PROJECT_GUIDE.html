@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRIS - Complete Project Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica", "Arial", sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        header {
+            border-bottom: 3px solid #3B82F6;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 1.1em;
+            color: #666;
+            font-style: italic;
+        }
+
+        h2 {
+            font-size: 1.8em;
+            color: #1e40af;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3B82F6;
+            padding-left: 15px;
+        }
+
+        h3 {
+            font-size: 1.3em;
+            color: #2563eb;
+            margin-top: 25px;
+            margin-bottom: 10px;
+        }
+
+        h4 {
+            font-size: 1.1em;
+            color: #3b82f6;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: "Courier New", monospace;
+            font-size: 0.95em;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-bottom: 15px;
+            font-family: "Courier New", monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th {
+            background: #3B82F6;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .status-done {
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .status-progress {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+
+        .status-todo {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .box {
+            background: #f0f9ff;
+            border-left: 4px solid #3B82F6;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .box.warning {
+            background: #fef3c7;
+            border-left-color: #f59e0b;
+        }
+
+        .box.success {
+            background: #d1fae5;
+            border-left-color: #10b981;
+        }
+
+        .toc {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+            color: #1e40af;
+        }
+
+        .toc a {
+            color: #3B82F6;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        .toc ol {
+            margin-bottom: 0;
+        }
+
+        blockquote {
+            border-left: 4px solid #3B82F6;
+            padding-left: 15px;
+            color: #666;
+            margin: 20px 0;
+        }
+
+        .footer {
+            border-top: 2px solid #e5e7eb;
+            padding-top: 20px;
+            margin-top: 40px;
+            color: #666;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .download-info {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #1e40af;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+            .container {
+                box-shadow: none;
+                padding: 20px;
+            }
+
+            .download-info {
+                display: none;
+            }
+
+            h2 {
+                page-break-after: avoid;
+            }
+
+            h3 {
+                page-break-after: avoid;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            h2 {
+                font-size: 1.4em;
+            }
+
+            pre {
+                font-size: 0.85em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔮 IRIS</h1>
+            <p class="tagline">Intelligent Real-time Interactive System — A voice-first AI assistant for Windows</p>
+        </header>
+
+        <div class="download-info">
+            <strong>📥 Offline Version:</strong> This HTML document can be saved, printed to PDF, or opened offline in any browser.
+        </div>
+
+        <div class="toc">
+            <h3>📋 Quick Navigation</h3>
+            <ol>
+                <li><a href="#overview">Project Overview</a></li>
+                <li><a href="#vision">Vision & Goals</a></li>
+                <li><a href="#architecture">Core Architecture</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#requirements">System Requirements</a></li>
+                <li><a href="#installation">Installation</a></li>
+                <li><a href="#configuration">Configuration</a></li>
+                <li><a href="#usage">Usage Guide</a></li>
+                <li><a href="#api">API Reference</a></li>
+                <li><a href="#development">Development Guide</a></li>
+                <li><a href="#troubleshooting">Troubleshooting</a></li>
+                <li><a href="#roadmap">Roadmap</a></li>
+                <li><a href="#faq">FAQs</a></li>
+            </ol>
+        </div>
+
+        <section id="overview">
+            <h2>📖 Project Overview</h2>
+
+            <h3>What is IRIS?</h3>
+            <p>IRIS is an open-source voice-controlled AI assistant designed for Windows that bridges the gap between natural language commands and system actions. It combines:</p>
+            <ul>
+                <li><strong>Voice Input</strong> — Speak naturally; IRIS listens and understands</li>
+                <li><strong>AI Reasoning</strong> — DeepSeek/Claude-powered decision making</li>
+                <li><strong>System Actions</strong> — Execute files, apps, browser automation, emails, tasks</li>
+                <li><strong>Memory</strong> — Learns from past interactions and maintains context</li>
+                <li><strong>Real-time UI</strong> — Transparent overlay with state feedback</li>
+            </ul>
+
+            <h3>Use Cases</h3>
+            <ul>
+                <li><strong>Productivity</strong> — Automate repetitive tasks, manage todos, schedule reminders</li>
+                <li><strong>Information</strong> — Weather, news, stock prices, web search</li>
+                <li><strong>Desktop Control</strong> — Launch apps, manage files, execute scripts</li>
+                <li><strong>Browser Automation</strong> — Fill forms, navigate sites, scrape data</li>
+                <li><strong>Communication</strong> — Send emails, schedule meetings, manage messages</li>
+            </ul>
+
+            <h3>Current Status</h3>
+            <ul>
+                <li><span class="status-done">✅ Phase 1</span> Complete (core audio, LLM, agents, basic actions)</li>
+                <li><span class="status-done">✅ Phase 2</span> Complete (browser, coding agent, credential encryption, CLI)</li>
+                <li><span class="status-done">✅ Phase 3-4</span> Complete (email, todo, weather, timers)</li>
+                <li><span class="status-progress">🟡 Pre-Launch</span> In Progress (performance optimization, error handling, testing)</li>
+            </ul>
+        </section>
+
+        <section id="vision">
+            <h2>🎯 Vision & Goals</h2>
+
+            <h3>Short-term (3-6 months)</h3>
+            <ul>
+                <li>✅ Stable, production-ready voice assistant</li>
+                <li>✅ 30+ reliable actions (files, apps, browser, email, scheduling)</li>
+                <li>✅ Comprehensive documentation & community support</li>
+                <li>✅ Windows 10/11 full support</li>
+                <li>✅ &lt;3s end-to-end latency (speak → response)</li>
+            </ul>
+
+            <h3>Medium-term (6-12 months)</h3>
+            <ul>
+                <li>🟡 Calendar + smart home integration</li>
+                <li>🟡 macOS/Linux support</li>
+                <li>🟡 Advanced action chaining (multi-step workflows)</li>
+                <li>🟡 Settings UI (no config file editing)</li>
+                <li>🟡 Community extensions/plugins</li>
+            </ul>
+
+            <h3>Long-term (1-2 years)</h3>
+            <ul>
+                <li>🔴 Mobile companion app (iOS/Android)</li>
+                <li>🔴 Enterprise features (teams, compliance)</li>
+                <li>🔴 Advanced AI capabilities (vision, reasoning)</li>
+                <li>🔴 Open ecosystem (3rd party actions)</li>
+                <li>🔴 Multi-language support</li>
+            </ul>
+
+            <div class="box success">
+                <strong>Ultimate Vision:</strong> "A PC assistant that understands you, remembers you, and acts for you — as natural as talking to a coworker."
+            </div>
+        </section>
+
+        <section id="architecture">
+            <h2>🏗️ Core Architecture</h2>
+
+            <h3>High-Level Flow</h3>
+            <pre>User (Voice)
+    ↓
+Audio Module (capture, wake word, interrupt)
+    ↓
+ASR Engine (Groq Whisper) → Text
+    ↓
+Core Event Loop (state manager, router)
+    ↓
+LLM Router (DeepSeek/Qwen) → Action
+    ↓
+Agent System (Planner, Executor, Coder)
+    ↓
+Action Router (validate, check safety, execute)
+    ↓
+Handler Dispatch (25+ action handlers)
+    ↓
+Memory System (store outcome)
+    ↓
+Voice/UI Output (TTS, overlay)
+    ↓
+User (Sees/Hears)</pre>
+
+            <h3>Key Design Principles</h3>
+            <ol>
+                <li><strong>Async-First</strong> — All I/O is non-blocking (audio, API, file)</li>
+                <li><strong>Safety by Default</strong> — Dangerous actions require approval</li>
+                <li><strong>Graceful Degradation</strong> — Works offline with fallbacks</li>
+                <li><strong>Memory-Aware</strong> — Learns from past interactions</li>
+                <li><strong>Modular</strong> — Easy to add new actions/agents</li>
+                <li><strong>Privacy-First</strong> — No data sent to cloud (except APIs you authorize)</li>
+                <li><strong>Cross-Platform</strong> — Paths, processes, APIs abstracted</li>
+                <li><strong>Testable</strong> — Unit + integration tests throughout</li>
+            </ol>
+        </section>
+
+        <section id="features">
+            <h2>✨ Features</h2>
+
+            <h3>🎤 Audio & Voice (Complete)</h3>
+            <ul>
+                <li>Wake word detection (Jarvis/Iris)</li>
+                <li>Microphone input with sounddevice</li>
+                <li>ASR via Groq Whisper API</li>
+                <li>Interrupt handling (say "stop")</li>
+                <li>TTS via ElevenLabs (11 voices)</li>
+                <li>Real-time audio streaming</li>
+            </ul>
+
+            <h3>🧠 AI & Reasoning (Complete)</h3>
+            <ul>
+                <li>LLM routing (DeepSeek + local Qwen2.5 fallback)</li>
+                <li>Task planning (decomposition)</li>
+                <li>Task execution (orchestration)</li>
+                <li>Code generation & execution</li>
+                <li>Context injection from memory</li>
+                <li>Dynamic prompt engineering</li>
+            </ul>
+
+            <h3>📁 File Operations (Complete)</h3>
+            <ul>
+                <li>Read files</li>
+                <li>Write/create files</li>
+                <li>Move/rename files</li>
+                <li>Delete files (DANGEROUS - requires approval)</li>
+            </ul>
+
+            <h3>🖥️ OS Control (Complete)</h3>
+            <ul>
+                <li>Launch applications</li>
+                <li>Bring windows to front</li>
+                <li>Execute cmd/PowerShell (WARN)</li>
+                <li>Admin commands (DANGEROUS)</li>
+            </ul>
+
+            <h3>🌐 Browser Automation (Complete)</h3>
+            <ul>
+                <li>Navigate to URLs</li>
+                <li>Click elements (WARN)</li>
+                <li>Type into fields (WARN)</li>
+                <li>Auto-login with encrypted credentials (DANGEROUS)</li>
+                <li>Extract/scrape data</li>
+            </ul>
+
+            <h3>📧 Email (Complete — NEW)</h3>
+            <ul>
+                <li>Send emails via SMTP</li>
+                <li>Check email inbox (unread count + latest subject)</li>
+                <li>Support: Gmail, Outlook, Yahoo, ProtonMail, iCloud</li>
+            </ul>
+
+            <h3>✅ Todo Manager (Complete — NEW)</h3>
+            <ul>
+                <li>Add tasks with priority (high/normal/low)</li>
+                <li>List all tasks (pending + completed)</li>
+                <li>Mark tasks complete</li>
+                <li>Delete tasks</li>
+                <li>Persistent JSON storage (~/.iris/tasks.json)</li>
+            </ul>
+
+            <h3>🌤️ Weather API (Complete — NEW)</h3>
+            <ul>
+                <li>Current weather (temp, humidity, wind)</li>
+                <li>3-5 day forecast</li>
+                <li>Location-based or default city</li>
+                <li>OpenWeatherMap API (free tier)</li>
+            </ul>
+
+            <h3>⏱️ Timer & Reminders (Complete — NEW)</h3>
+            <ul>
+                <li>Countdown timers (1s-1hr)</li>
+                <li>Schedule reminders (1min-24hr)</li>
+                <li>List all reminders</li>
+                <li>Cancel reminders</li>
+                <li>Timers: in-memory | Reminders: persistent JSON</li>
+            </ul>
+
+            <h3>📋 Other Actions</h3>
+            <ul>
+                <li>Clipboard (read/write)</li>
+                <li>Screenshots</li>
+                <li>OCR (text extraction from images)</li>
+            </ul>
+
+            <h3>💾 Memory System (Complete)</h3>
+            <ul>
+                <li><strong>Short-term:</strong> Last 20 messages (injected into every LLM prompt)</li>
+                <li><strong>Long-term:</strong> Vector DB (ChromaDB) with semantic search</li>
+                <li><strong>Knowledge Graph:</strong> Relationships, habits, patterns</li>
+            </ul>
+        </section>
+
+        <section id="requirements">
+            <h2>💻 System Requirements</h2>
+
+            <h3>Hardware (Minimum)</h3>
+            <ul>
+                <li><strong>CPU:</strong> Intel i5 / AMD Ryzen 5 (4 cores)</li>
+                <li><strong>RAM:</strong> 8 GB (16 GB recommended)</li>
+                <li><strong>Storage:</strong> 20 GB SSD (for models + cache)</li>
+                <li><strong>Mic:</strong> Any USB or built-in microphone</li>
+                <li><strong>Internet:</strong> Required for cloud APIs (can work offline with local models)</li>
+            </ul>
+
+            <h3>Software</h3>
+            <table>
+                <tr>
+                    <th>Requirement</th>
+                    <th>Version</th>
+                    <th>Purpose</th>
+                </tr>
+                <tr>
+                    <td>Python</td>
+                    <td>3.11+</td>
+                    <td>Runtime</td>
+                </tr>
+                <tr>
+                    <td>Windows</td>
+                    <td>10/11 (64-bit)</td>
+                    <td>OS</td>
+                </tr>
+                <tr>
+                    <td>Rust</td>
+                    <td>Latest</td>
+                    <td>Tauri build</td>
+                </tr>
+                <tr>
+                    <td>Git</td>
+                    <td>Any</td>
+                    <td>Version control</td>
+                </tr>
+                <tr>
+                    <td>FFmpeg</td>
+                    <td>Any</td>
+                    <td>Audio processing</td>
+                </tr>
+            </table>
+
+            <h3>API Keys (Optional but Recommended)</h3>
+            <table>
+                <tr>
+                    <th>API</th>
+                    <th>Purpose</th>
+                    <th>Cost</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td>DeepSeek</td>
+                    <td>Advanced reasoning</td>
+                    <td>~$0.01 per 1M tokens</td>
+                    <td>Optional (fallback: Qwen)</td>
+                </tr>
+                <tr>
+                    <td>ElevenLabs</td>
+                    <td>Voice synthesis</td>
+                    <td>Free tier: 10k chars/month</td>
+                    <td>Optional</td>
+                </tr>
+                <tr>
+                    <td>Groq</td>
+                    <td>Speech-to-text</td>
+                    <td>Free tier: 3600 RPM</td>
+                    <td>Recommended</td>
+                </tr>
+                <tr>
+                    <td>OpenWeatherMap</td>
+                    <td>Weather data</td>
+                    <td>Free tier: 1000 calls/day</td>
+                    <td>Optional</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="installation">
+            <h2>🚀 Installation</h2>
+
+            <h3>1. Prerequisites</h3>
+            <pre>python --version    # Should be 3.11+
+git --version
+rustup --version
+cargo --version</pre>
+
+            <h3>2. Clone Repository</h3>
+            <pre>cd C:\Users\YourName\Desktop
+git clone https://github.com/Aradhya648/Iris.git
+cd Iris</pre>
+
+            <h3>3. Create Virtual Environment (Optional)</h3>
+            <pre>python -m venv venv
+venv\Scripts\Activate.ps1</pre>
+
+            <h3>4. Install Dependencies</h3>
+            <pre>pip install -r requirements.txt
+python -m playwright install chromium</pre>
+
+            <h3>5. Install Tauri CLI (for UI)</h3>
+            <pre>cargo install tauri-cli
+# Takes ~8 minutes</pre>
+
+            <h3>6. Configure API Keys</h3>
+            <p>Edit <code>configs/settings.yaml</code> and add:</p>
+            <pre>llm:
+  deepseek_api_key: "your_key_here"
+
+voice:
+  elevenlabs_api_key: "your_key_here"
+
+audio:
+  groq_api_key: "your_key_here"
+
+weather:
+  openweather_api_key: "your_key_here"</pre>
+        </section>
+
+        <section id="configuration">
+            <h2>⚙️ Configuration</h2>
+
+            <h3>Main Config File: configs/settings.yaml</h3>
+            <pre>llm:
+  default_model: "deepseek-flash"
+  deepseek_api_key: ""  # Required for reasoning
+
+audio:
+  sample_rate: 16000
+  wake_words: ["jarvis", "iris"]
+  groq_api_key: ""  # For ASR
+
+voice:
+  elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"  # Rachel
+  elevenlabs_model: "eleven_turbo_v2"
+
+memory:
+  chroma_path: "~/.iris/memory/chroma"
+  embedding_model: "BAAI/bge-m3"
+
+ui:
+  ipc_port: 7788
+  outline_width: 3
+
+logging:
+  level: "DEBUG"
+  log_file: "logs/iris.log"</pre>
+
+            <h3>CLI Arguments</h3>
+            <pre>python main.py                              # Normal
+python main.py --headless                      # No UI overlay
+python main.py --config custom_config.yaml     # Custom config
+python main.py --headless --config config.yaml # Both</pre>
+        </section>
+
+        <section id="usage">
+            <h2>🎤 Usage Guide</h2>
+
+            <h3>Starting IRIS</h3>
+            <p><strong>Terminal 1 — Python Backend:</strong></p>
+            <pre>cd Iris
+python main.py</pre>
+
+            <p><strong>Terminal 2 — UI Overlay (Optional):</strong></p>
+            <pre>cd Iris\ui\tauri-app
+cargo tauri dev</pre>
+
+            <h3>Using IRIS</h3>
+            <ol>
+                <li>Say <strong>"Iris"</strong> or <strong>"Jarvis"</strong> (wake word)</li>
+                <li>Wait for blue border (listening state)</li>
+                <li>Speak your command naturally</li>
+                <li>IRIS processes and responds</li>
+                <li>Green border = processing | White = done</li>
+            </ol>
+
+            <h3>Example Commands</h3>
+            <pre>"What time is it?"
+"Open Notepad"
+"Send email to bob@example.com, subject: Hello, body: Hi Bob"
+"Check my email"
+"Add task: finish project"
+"What's the weather in Paris?"
+"Set timer for 10 minutes"
+"Remind me to check email in 30 minutes"
+"Take a screenshot"
+"Create file: notes.txt with content: Meeting tomorrow at 2pm"</pre>
+
+            <h3>State Feedback</h3>
+            <table>
+                <tr>
+                    <th>Border</th>
+                    <th>State</th>
+                    <th>Meaning</th>
+                </tr>
+                <tr>
+                    <td>White (static)</td>
+                    <td>IDLE</td>
+                    <td>Waiting for wake word</td>
+                </tr>
+                <tr>
+                    <td>Blue (pulse)</td>
+                    <td>INTERACTIVE</td>
+                    <td>Listening to you</td>
+                </tr>
+                <tr>
+                    <td>Green (sweep)</td>
+                    <td>ACTING</td>
+                    <td>Processing & executing</td>
+                </tr>
+                <tr>
+                    <td>Fading white</td>
+                    <td>STOPPING</td>
+                    <td>Shutting down</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="api">
+            <h2>🔌 API Reference</h2>
+
+            <h3>Standard Response Format</h3>
+            <pre>{
+    "status": "ok" | "error",
+    "result": "Human-readable message",
+    "requires_approval": false | true  # If DANGEROUS action
+}</pre>
+
+            <h3>Action Handlers (25+)</h3>
+
+            <h4>File Actions</h4>
+            <ul>
+                <li><code>read_file</code> — Read text file</li>
+                <li><code>write_file</code> — Create/write file</li>
+                <li><code>move_file</code> — Move/rename file</li>
+                <li><code>delete_file</code> — Delete file (DANGEROUS)</li>
+            </ul>
+
+            <h4>OS Actions</h4>
+            <ul>
+                <li><code>open_app</code> — Launch application</li>
+                <li><code>focus_window</code> — Bring window to front</li>
+                <li><code>run_shell</code> — Execute command (WARN)</li>
+                <li><code>run_shell_sudo</code> — Admin command (DANGEROUS)</li>
+            </ul>
+
+            <h4>Email Actions</h4>
+            <ul>
+                <li><code>send_email</code> — Send via SMTP (WARN)</li>
+                <li><code>check_email</code> — Check inbox (SAFE)</li>
+            </ul>
+
+            <h4>Todo Actions</h4>
+            <ul>
+                <li><code>add_task</code> — Add task (WARN)</li>
+                <li><code>list_tasks</code> — Show tasks (SAFE)</li>
+                <li><code>mark_task_complete</code> — Check off (WARN)</li>
+                <li><code>delete_task</code> — Remove task (WARN)</li>
+            </ul>
+
+            <h4>Weather Actions</h4>
+            <ul>
+                <li><code>get_weather</code> — Current conditions (SAFE)</li>
+                <li><code>get_forecast</code> — Multi-day forecast (SAFE)</li>
+            </ul>
+
+            <h4>Timer Actions</h4>
+            <ul>
+                <li><code>set_timer</code> — Countdown (WARN)</li>
+                <li><code>set_reminder</code> — Schedule reminder (WARN)</li>
+                <li><code>list_reminders</code> — Show reminders (SAFE)</li>
+                <li><code>cancel_reminder</code> — Delete reminder (WARN)</li>
+            </ul>
+
+            <h4>Other Actions</h4>
+            <ul>
+                <li><code>get_clipboard</code> — Read clipboard (SAFE)</li>
+                <li><code>set_clipboard</code> — Write clipboard (WARN)</li>
+                <li><code>screenshot</code> — Capture screen (SAFE)</li>
+                <li><code>ocr</code> — Extract text (SAFE)</li>
+                <li><code>browser_navigate</code> — Go to URL (SAFE)</li>
+                <li><code>browser_click</code> — Click element (WARN)</li>
+                <li><code>browser_type</code> — Type text (WARN)</li>
+                <li><code>browser_login</code> — Auto-login (DANGEROUS)</li>
+                <li><code>browser_extract</code> — Scrape data (SAFE)</li>
+            </ul>
+        </section>
+
+        <section id="development">
+            <h2>👨‍💻 Development Guide</h2>
+
+            <h3>Adding a New Action (5 Steps)</h3>
+
+            <h4>Step 1: Create action module</h4>
+            <pre># actions/my_action.py
+async def my_action(param1: str) -> dict:
+    """Do something."""
+    try:
+        result = "Success!"
+        logger.info(result)
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        logger.error(str(e))
+        return {"status": "error", "result": str(e)}</pre>
+
+            <h4>Step 2: Register in router</h4>
+            <pre># actions/action_router.py
+from actions import my_action
+
+ACTION_HANDLERS = {
+    ...
+    "my_action": my_action.my_action,
+}</pre>
+
+            <h4>Step 3: Classify safety</h4>
+            <pre># actions/safety.py
+ACTION_SAFETY_MAP = {
+    ...
+    "my_action": SafetyLevel.SAFE,  # or WARN/DANGEROUS
+}</pre>
+
+            <h4>Step 4: Write tests</h4>
+            <pre># tests/test_my_action.py
+def test_my_action_registered():
+    assert "my_action" in ACTION_HANDLERS
+
+def test_my_action_safety():
+    assert classify("my_action") == SafetyLevel.SAFE</pre>
+
+            <h4>Step 5: Document</h4>
+            <p>Create <code>docs/MY_ACTION_SETUP.md</code> with usage guide.</p>
+
+            <h3>Running Tests</h3>
+            <pre>python -m pytest tests/ -v
+python -m pytest tests/test_email.py -v
+python -m pytest tests/ --cov=actions</pre>
+        </section>
+
+        <section id="troubleshooting">
+            <h2>🔧 Troubleshooting</h2>
+
+            <h3>Common Issues</h3>
+
+            <h4>"Wake word not detecting"</h4>
+            <div class="box warning">
+                <strong>Solutions:</strong>
+                <ul>
+                    <li>Check microphone: Settings → Privacy → Microphone</li>
+                    <li>Speak clearly and loudly</li>
+                    <li>Restart IRIS</li>
+                </ul>
+            </div>
+
+            <h4>"DeepSeek API key not found"</h4>
+            <div class="box warning">
+                <strong>Solution:</strong>
+                <ul>
+                    <li>Add to <code>configs/settings.yaml</code>:</li>
+                </ul>
+                <pre>llm:
+  deepseek_api_key: "sk_xxxxx"</pre>
+            </div>
+
+            <h4>"TTS not producing audio"</h4>
+            <div class="box warning">
+                <strong>Solutions:</strong>
+                <ul>
+                    <li>Check speaker volume</li>
+                    <li>Verify ElevenLabs key in <code>voice.elevenlabs_api_key</code></li>
+                    <li>Check audio device settings</li>
+                </ul>
+            </div>
+
+            <h4>"Module not found"</h4>
+            <div class="box warning">
+                <strong>Solution:</strong>
+                <pre>pip install -r requirements.txt</pre>
+            </div>
+
+            <h3>Logs Location</h3>
+            <p>Check <code>logs/iris.log</code> for full activity log.</p>
+        </section>
+
+        <section id="roadmap">
+            <h2>🗺️ Roadmap</h2>
+
+            <h3>Phase 1 ✅ (Complete)</h3>
+            <p>Core event loop, audio, LLM, agents, basic actions, Windows support</p>
+
+            <h3>Phase 2 ✅ (Complete)</h3>
+            <p>Browser automation, coding agent, credential encryption, Tauri UI, comprehensive testing</p>
+
+            <h3>Phase 3 ✅ (Complete)</h3>
+            <p>Email actions, todo manager, weather API, timer/reminders, safety classification</p>
+
+            <h3>Phase 4 🟡 (In Progress)</h3>
+            <p>Performance optimization, error handling, production config, security hardening, E2E testing</p>
+
+            <h3>Phase 5 (Planned)</h3>
+            <p>Settings UI, calendar integration, smart home, action chaining, habit learning</p>
+
+            <h3>Phase 6 (Future)</h3>
+            <p>macOS/Linux support, mobile apps, enterprise features, multi-language support</p>
+        </section>
+
+        <section id="faq">
+            <h2>❓ FAQs</h2>
+
+            <h3>Licensing & Cost</h3>
+
+            <h4>Is IRIS free?</h4>
+            <p>Yes, IRIS is MIT licensed (open source, free to use/modify/distribute).</p>
+
+            <h4>Do I need to pay for APIs?</h4>
+            <p>Optional APIs (DeepSeek, ElevenLabs, Groq, OpenWeatherMap) have free tiers. IRIS works offline with local Qwen2.5.</p>
+
+            <h3>Privacy & Security</h3>
+
+            <h4>Does IRIS send my data to the cloud?</h4>
+            <p>Only to APIs you explicitly authorize (DeepSeek, ElevenLabs, etc.). All local processing stays on your PC.</p>
+
+            <h4>Are my files/passwords safe?</h4>
+            <p>Credentials are encrypted with the cryptography library. File access is local only. Browser passwords are encrypted in <code>~/.iris/credentials.enc</code>.</p>
+
+            <h3>Compatibility</h3>
+
+            <h4>Can IRIS work without internet?</h4>
+            <p>Partially. Local Qwen2.5 + local Whisper (optional) work offline. Cloud APIs require internet.</p>
+
+            <h4>Does IRIS work on Mac?</h4>
+            <p>Not yet (Phase 6). Python code is cross-platform; Tauri UI needs setup.</p>
+
+            <h4>Does IRIS work on Linux?</h4>
+            <p>Partial (command-line only). Full Tauri support planned for Phase 6.</p>
+        </section>
+
+        <div class="footer">
+            <p><strong>IRIS — Making your PC responsive to voice. Your assistant, your way.</strong></p>
+            <p>Version 0.2.0 | May 2026 | MIT License</p>
+            <p>For more information, visit: <strong>https://github.com/Aradhya648/Iris</strong></p>
+            <p style="margin-top: 20px; font-size: 0.85em;">
+                📥 <strong>How to download this guide:</strong><br>
+                • <strong>PDF:</strong> Print this page (Ctrl+P) and save as PDF<br>
+                • <strong>HTML:</strong> Right-click → Save As → Save as .html<br>
+                • <strong>Text:</strong> Copy all and paste into a text editor
+            </p>
+        </div>
+    </div>
+</body>
+</html>
