@@ -26,7 +26,19 @@ ACTION_SAFETY_MAP: dict[str, SafetyLevel] = {
     "browser_click":    SafetyLevel.WARN,
     "browser_type":     SafetyLevel.WARN,
     "send_email":       SafetyLevel.WARN,
+    "add_task":         SafetyLevel.WARN,
+    "mark_task_complete": SafetyLevel.WARN,
+    "delete_task":      SafetyLevel.WARN,
+    "set_timer":        SafetyLevel.WARN,
+    "set_reminder":     SafetyLevel.WARN,
+    "cancel_reminder":  SafetyLevel.WARN,
+
+    # SAFE
     "check_email":      SafetyLevel.SAFE,
+    "list_tasks":       SafetyLevel.SAFE,
+    "get_weather":      SafetyLevel.SAFE,
+    "get_forecast":     SafetyLevel.SAFE,
+    "list_reminders":   SafetyLevel.SAFE,
 
     # DANGEROUS
     "delete_file":      SafetyLevel.DANGEROUS,

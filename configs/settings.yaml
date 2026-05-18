@@ -49,6 +49,21 @@ email:
   receiver_email: "your_email@gmail.com"
   receiver_password: ""                  # Same password as above
 
+weather:
+  # Get free API key at openweathermap.org/api
+  openweather_api_key: ""                # Your OpenWeather API key (free tier)
+  default_city: "London"                 # City for weather lookups if not specified
+
+todo:
+  # Todos are stored locally in ~/.iris/tasks.json
+  # No configuration needed, but you can add default priority here
+  default_priority: "normal"             # "low", "normal", or "high"
+
+timers:
+  # Timers and reminders are stored locally in ~/.iris/reminders.json
+  # No configuration needed
+  default_timezone: "UTC"                # For reminder display times
+
 logging:
   level: "DEBUG"
   log_file: "logs/iris.log"

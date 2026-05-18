@@ -3,7 +3,10 @@
 import uuid
 from loguru import logger
 from actions.safety import classify, SafetyLevel
-from actions import os_actions, shell_actions, file_actions, screen_actions, clipboard_actions, email_actions
+from actions import (
+    os_actions, shell_actions, file_actions, screen_actions, clipboard_actions,
+    email_actions, todo_actions, weather_actions, timer_actions
+)
 
 
 ACTION_HANDLERS = {
@@ -21,6 +24,16 @@ ACTION_HANDLERS = {
     "set_clipboard":    clipboard_actions.set_clipboard,
     "send_email":       email_actions.send_email,
     "check_email":      email_actions.check_email,
+    "add_task":         todo_actions.add_task,
+    "list_tasks":       todo_actions.list_tasks,
+    "mark_task_complete": todo_actions.mark_task_complete,
+    "delete_task":      todo_actions.delete_task,
+    "get_weather":      weather_actions.get_weather,
+    "get_forecast":     weather_actions.get_forecast,
+    "set_timer":        timer_actions.set_timer,
+    "set_reminder":     timer_actions.set_reminder,
+    "list_reminders":   timer_actions.list_reminders,
+    "cancel_reminder":  timer_actions.cancel_reminder,
 }
 
 
