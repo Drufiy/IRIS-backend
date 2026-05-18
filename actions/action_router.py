@@ -3,7 +3,7 @@
 import uuid
 from loguru import logger
 from actions.safety import classify, SafetyLevel
-from actions import os_actions, shell_actions, file_actions, screen_actions, clipboard_actions
+from actions import os_actions, shell_actions, file_actions, screen_actions, clipboard_actions, email_actions
 
 
 ACTION_HANDLERS = {
@@ -19,6 +19,8 @@ ACTION_HANDLERS = {
     "ocr":              screen_actions.ocr_screenshot,
     "get_clipboard":    clipboard_actions.get_clipboard,
     "set_clipboard":    clipboard_actions.set_clipboard,
+    "send_email":       email_actions.send_email,
+    "check_email":      email_actions.check_email,
 }
 
 

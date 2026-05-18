@@ -1,0 +1,108 @@
+================================================================================
+                    IRIS EMAIL ACTIONS — QUICK START
+================================================================================
+
+NEW FEATURES ADDED:
+  - Send emails via voice
+  - Check unread email count
+
+SETUP (5 minutes):
+
+1. Edit: configs/settings.yaml
+
+   Add this section:
+
+   email:
+     smtp_server: "smtp.gmail.com"
+     smtp_port: 587
+     sender_email: "your_email@gmail.com"
+     sender_password: "your_password"     ← ADD YOUR GMAIL PASSWORD HERE
+     imap_server: "imap.gmail.com"
+     receiver_email: "your_email@gmail.com"
+     receiver_password: "your_password"
+
+2. If using Gmail:
+   - Enable 2-step verification (security settings)
+   - Create app-specific password (account.google.com)
+   - Use that password in settings.yaml
+
+3. Done! Restart IRIS.
+
+================================================================================
+USAGE:
+================================================================================
+
+SEND EMAIL:
+  "Send email to alice@example.com, subject: Hello, body: Hi Alice!"
+
+CHECK EMAIL:
+  "Check my email"
+  → "You have 3 unread emails. Latest: Meeting rescheduled"
+
+================================================================================
+SAFETY:
+================================================================================
+
+send_email  → WARN (logged, not dangerous)
+check_email → SAFE (auto-execute)
+
+No approval popups needed.
+
+================================================================================
+FILES CHANGED:
+================================================================================
+
+Created:
+  actions/email_actions.py          ← Main implementation
+  tests/test_email.py               ← Tests
+  docs/EMAIL_SETUP.md               ← Full setup guide
+  docs/EMAIL_IMPLEMENTATION_SUMMARY.md
+
+Modified:
+  actions/action_router.py          ← Registered handlers
+  actions/safety.py                 ← Added safety levels
+  configs/settings.yaml             ← Added email config
+
+No breaking changes.
+
+================================================================================
+TROUBLESHOOTING:
+================================================================================
+
+"Email not configured"
+  → Add sender_email & sender_password to settings.yaml
+
+"Authentication failed"
+  → Gmail: Use app-specific password, not account password
+  → Outlook: Enable 2-step verification first
+  → Check email address matches
+
+"Connection timeout"
+  → Check SMTP/IMAP server is correct for your provider
+  → Verify port 587 is not blocked by firewall
+
+See docs/EMAIL_SETUP.md for detailed instructions.
+
+================================================================================
+EXAMPLES:
+================================================================================
+
+Send simple email:
+  "Email bob@company.com with subject: Update and body: All good"
+
+Check inbox:
+  "Do I have new emails?"
+
+Multiple emails (series):
+  "Send email to alice@example.com, subject: Hello, body: Hi"
+  "Send email to bob@example.com, subject: Hi, body: How are you"
+
+================================================================================
+CREDITS:
+================================================================================
+
+Implementation: Claude Code
+Date: 2026-05-18
+Version: 1.0 (Alpha)
+
+Status: TESTED & READY TO USE ✓

@@ -37,6 +37,18 @@ browser:
   headless: false
   credentials_path: "~/.iris/credentials.enc"
 
+email:
+  # SMTP for sending emails
+  smtp_server: "smtp.gmail.com"          # Gmail: smtp.gmail.com, Outlook: smtp-mail.outlook.com
+  smtp_port: 587                         # 587 (TLS) or 465 (SSL)
+  sender_email: "your_email@gmail.com"   # Your email address
+  sender_password: ""                    # Your password or app-specific password
+
+  # IMAP for checking emails
+  imap_server: "imap.gmail.com"          # Gmail: imap.gmail.com, Outlook: outlook.office365.com
+  receiver_email: "your_email@gmail.com"
+  receiver_password: ""                  # Same password as above
+
 logging:
   level: "DEBUG"
   log_file: "logs/iris.log"

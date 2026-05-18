@@ -25,6 +25,8 @@ ACTION_SAFETY_MAP: dict[str, SafetyLevel] = {
     "set_clipboard":    SafetyLevel.WARN,
     "browser_click":    SafetyLevel.WARN,
     "browser_type":     SafetyLevel.WARN,
+    "send_email":       SafetyLevel.WARN,
+    "check_email":      SafetyLevel.SAFE,
 
     # DANGEROUS
     "delete_file":      SafetyLevel.DANGEROUS,
