@@ -629,3 +629,63 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             proposals = await manager.read_improvement_proposals()
             self.assertTrue(all(proposal["status"] == "needs_human_review" for proposal in proposals))
             self.assertIn("human review", proposals[0]["human_review_reason"].lower())
+
+    async def test_memory_manager_marks_completed_proposal_as_regressed_after_similar_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "improvement_proposal_cooldown_hours": 0,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+            created_at = datetime.now(timezone.utc).isoformat()
+            await manager.long.save_improvement_proposal(
+                {
+                    "id": "completed-1",
+                    "created_at": created_at,
+                    "status": "completed",
+                    "proposal_type": "code_change",
+                    "domain": "browser",
+                    "trigger": "repeated_failures",
+                    "priority": "high",
+                    "title": "Investigate repeated browser failures",
+                    "summary": "Tighten browser flow.",
+                    "evidence": {
+                        "user_input": "check weather in browser",
+                        "action_summary": "browser:error selector timeout",
+                        "error_message": "selector timeout",
+                    },
+                    "execution_history": [],
+                    "attempt_count": 0,
+                }
+            )
+
+            for _ in range(3):
+                await manager.record_interaction(
+                    user_input="check weather in browser",
+                    response="Sorry, something went wrong.",
+                    status="error",
+                    latency_seconds=1.0,
+                    action_summary="browser:error selector timeout",
+                    error_message="selector timeout",
+                )
+
+            proposals = await manager.read_improvement_proposals()
+            regressed = next(proposal for proposal in proposals if proposal["id"] == "completed-1")
+            self.assertEqual(regressed["status"], "regressed")
+            self.assertEqual(regressed["regression_count"], 1)
+            self.assertEqual(regressed["execution_history"][-1]["event"], "regression_detected")
+
+            new_failure_proposal = next(
+                proposal for proposal in proposals
+                if proposal.get("id") != "completed-1" and proposal["trigger"] == "repeated_failures"
+            )
+            self.assertTrue(new_failure_proposal["regression_detected"])
+            self.assertIn("completed-1", new_failure_proposal["related_regressed_proposal_ids"])
+            self.assertTrue(new_failure_proposal["approval_policy"]["requires_human_approval"])
+            self.assertIn("regressed", new_failure_proposal["approval_policy"]["reason"].lower())

@@ -78,6 +78,30 @@ class SelfImprovementManager:
             "timing_breakdown": self._normalize_timings(timing_breakdown or {}),
         }
         await self.long_term.save_interaction(record)
+        regression_targets = self._find_regressed_proposals(record, prior_proposals)
+        for proposal in regression_targets:
+            proposal_id = proposal.get("id", "")
+            if not proposal_id:
+                continue
+            if proposal.get("status") != "completed":
+                continue
+            regression_count = int(proposal.get("regression_count", 0)) + 1
+            await self.long_term.update_improvement_proposal(
+                proposal_id,
+                status="regressed",
+                regression_count=regression_count,
+                updated_at=datetime.now(timezone.utc).isoformat(),
+            )
+            await self.long_term.append_improvement_proposal_history(
+                proposal_id,
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "event": "regression_detected",
+                    "status": "regressed",
+                    "message": "A similar interaction regressed after this proposal had been completed.",
+                    "interaction_id": record["id"],
+                },
+            )
         reflection = self._build_reflection(record, prior_interactions=prior_interactions)
         await self.long_term.save_reflection(reflection)
         for proposal in self._build_improvement_proposals(
@@ -85,6 +109,7 @@ class SelfImprovementManager:
             reflection,
             prior_interactions=prior_interactions,
             prior_proposals=prior_proposals,
+            regression_targets=regression_targets,
         ):
             await self.long_term.save_improvement_proposal(proposal)
         return record
@@ -259,6 +284,7 @@ class SelfImprovementManager:
         *,
         prior_interactions: list[dict[str, Any]],
         prior_proposals: list[dict[str, Any]],
+        regression_targets: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Create reviewable improvement proposals from repeated failures or latency patterns."""
         proposals: list[dict[str, Any]] = []
@@ -268,10 +294,17 @@ class SelfImprovementManager:
         domain = reflection.get("domain", "general")
         repeated_failures = self._count_repeated_failures(record, prior_interactions)
         repeated_successes = self._count_repeated_successes(record, prior_interactions)
+        regression_detected = bool(regression_targets)
+        regressed_ids = [proposal.get("id", "") for proposal in regression_targets if proposal.get("id")]
 
         if repeated_failures >= 2:
             proposal_type = "code_change" if domain in {"browser", "coding", "files", "auth"} else "behavior_tuning"
-            approval_policy = self._approval_policy_for(proposal_type, domain, priority="high")
+            approval_policy = self._approval_policy_for(
+                proposal_type,
+                domain,
+                priority="high",
+                regression_detected=regression_detected,
+            )
             proposals.append(
                 {
                     "id": str(uuid4()),
@@ -298,12 +331,19 @@ class SelfImprovementManager:
                     "suggested_hints": [hint["value"] for hint in reflection.get("hints", [])],
                     "execution_history": [],
                     "attempt_count": 0,
+                    "regression_detected": regression_detected,
+                    "related_regressed_proposal_ids": regressed_ids,
                 }
             )
 
         if float(record.get("latency_seconds", 0.0)) >= 5:
             slowest_stage = self._slowest_stage(timing_breakdown)
-            approval_policy = self._approval_policy_for("performance_tuning", domain, priority="medium")
+            approval_policy = self._approval_policy_for(
+                "performance_tuning",
+                domain,
+                priority="medium",
+                regression_detected=regression_detected,
+            )
             proposals.append(
                 {
                     "id": str(uuid4()),
@@ -331,13 +371,20 @@ class SelfImprovementManager:
                     "suggested_hints": [hint["value"] for hint in reflection.get("hints", []) if hint.get("type") == "performance"],
                     "execution_history": [],
                     "attempt_count": 0,
+                    "regression_detected": regression_detected,
+                    "related_regressed_proposal_ids": regressed_ids,
                 }
             )
 
         if repeated_successes >= 2:
             chain_steps = self._extract_chain_steps(action_summary)
             if len(chain_steps) >= 2:
-                approval_policy = self._approval_policy_for("workflow_promotion", domain, priority="low")
+                approval_policy = self._approval_policy_for(
+                    "workflow_promotion",
+                    domain,
+                    priority="low",
+                    regression_detected=regression_detected,
+                )
                 proposals.append(
                     {
                         "id": str(uuid4()),
@@ -364,6 +411,8 @@ class SelfImprovementManager:
                         "suggested_hints": [hint["value"] for hint in reflection.get("hints", []) if hint.get("type") in {"chain", "pattern"}],
                         "execution_history": [],
                         "attempt_count": 0,
+                        "regression_detected": regression_detected,
+                        "related_regressed_proposal_ids": regressed_ids,
                     }
                 )
 
@@ -694,9 +743,22 @@ class SelfImprovementManager:
             proposal.get("created_at", ""),
         )
 
-    def _approval_policy_for(self, proposal_type: str, domain: str, *, priority: str) -> dict[str, Any]:
+    def _approval_policy_for(
+        self,
+        proposal_type: str,
+        domain: str,
+        *,
+        priority: str,
+        regression_detected: bool = False,
+    ) -> dict[str, Any]:
         """Define whether a proposal may run automatically or needs explicit human approval."""
         risky_domains = {"browser", "auth", "files", "coding"}
+        if regression_detected:
+            return {
+                "mode": "manual",
+                "requires_human_approval": True,
+                "reason": "A similar self-improvement attempt regressed, so this proposal requires human review.",
+            }
         if proposal_type == "code_change":
             return {
                 "mode": "manual",
@@ -736,3 +798,41 @@ class SelfImprovementManager:
             proposal.get("domain", ""),
             proposal.get("trigger", ""),
         )
+
+    def _find_regressed_proposals(
+        self,
+        record: dict[str, Any],
+        prior_proposals: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Find completed proposals that appear to have regressed based on a new bad outcome."""
+        if record.get("status") == "success" and float(record.get("latency_seconds", 0.0)) < 5:
+            return []
+
+        record_domain = self._infer_domain(record.get("user_input", ""), record.get("action_summary", ""))
+        record_tokens = self._tokens(f"{record.get('user_input', '')} {record.get('action_summary', '')}")
+        matches: list[dict[str, Any]] = []
+        for proposal in prior_proposals:
+            if proposal.get("status") not in {"completed", "regressed"}:
+                continue
+            if proposal.get("domain") != record_domain:
+                continue
+            proposal_tokens = self._proposal_tokens(proposal)
+            if record_tokens and len(record_tokens & proposal_tokens) < 2:
+                continue
+            matches.append(proposal)
+        return matches
+
+    def _proposal_tokens(self, proposal: dict[str, Any]) -> set[str]:
+        """Extract coarse matching tokens from a stored proposal."""
+        evidence = proposal.get("evidence", {})
+        text = " ".join(
+            [
+                proposal.get("title", ""),
+                proposal.get("summary", ""),
+                evidence.get("user_input", ""),
+                evidence.get("action_summary", ""),
+                evidence.get("error_message", ""),
+                evidence.get("chain", ""),
+            ]
+        )
+        return self._tokens(text)
