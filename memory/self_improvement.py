@@ -36,9 +36,15 @@ class SelfImprovementManager:
         "you",
     }
 
-    def __init__(self, long_term: LongTermMemory, retrieval_limit: int = 10) -> None:
+    def __init__(
+        self,
+        long_term: LongTermMemory,
+        retrieval_limit: int = 10,
+        proposal_cooldown_hours: int = 24,
+    ) -> None:
         self.long_term = long_term
         self.retrieval_limit = retrieval_limit
+        self.proposal_cooldown_hours = proposal_cooldown_hours
 
     async def record_interaction(
         self,
@@ -54,6 +60,7 @@ class SelfImprovementManager:
     ) -> dict[str, Any]:
         """Create and store a structured interaction record."""
         prior_interactions = await self.long_term.read_interactions()
+        prior_proposals = await self.long_term.read_improvement_proposals()
         record = {
             "id": str(uuid4()),
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -69,7 +76,12 @@ class SelfImprovementManager:
         await self.long_term.save_interaction(record)
         reflection = self._build_reflection(record, prior_interactions=prior_interactions)
         await self.long_term.save_reflection(reflection)
-        for proposal in self._build_improvement_proposals(record, reflection, prior_interactions=prior_interactions):
+        for proposal in self._build_improvement_proposals(
+            record,
+            reflection,
+            prior_interactions=prior_interactions,
+            prior_proposals=prior_proposals,
+        ):
             await self.long_term.save_improvement_proposal(proposal)
         return record
 
@@ -180,6 +192,7 @@ class SelfImprovementManager:
         reflection: dict[str, Any],
         *,
         prior_interactions: list[dict[str, Any]],
+        prior_proposals: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Create reviewable improvement proposals from repeated failures or latency patterns."""
         proposals: list[dict[str, Any]] = []
@@ -276,7 +289,11 @@ class SelfImprovementManager:
                     }
                 )
 
-        return self._dedupe_proposals(proposals, prior_interactions=prior_interactions)
+        return self._dedupe_proposals(
+            proposals,
+            prior_interactions=prior_interactions,
+            prior_proposals=prior_proposals,
+        )
 
     def _tokens(self, text: str) -> set[str]:
         return {
@@ -528,11 +545,13 @@ class SelfImprovementManager:
         proposals: list[dict[str, Any]],
         *,
         prior_interactions: list[dict[str, Any]],
+        prior_proposals: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Suppress identical proposals when a similar one already exists very recently."""
         del prior_interactions  # reserved for future ranking against recency windows
         deduped: list[dict[str, Any]] = []
         seen: set[tuple[str, str, str]] = set()
+        recent_existing = self._recent_proposal_keys(prior_proposals)
         for proposal in proposals:
             key = (
                 proposal.get("proposal_type", ""),
@@ -541,9 +560,51 @@ class SelfImprovementManager:
             )
             if key in seen:
                 continue
+            if key in recent_existing:
+                continue
             seen.add(key)
             deduped.append(proposal)
         return deduped
+
+    def _recent_proposal_keys(self, prior_proposals: list[dict[str, Any]]) -> set[tuple[str, str, str]]:
+        """Return proposal identity keys still inside the duplicate-suppression cooldown window."""
+        if self.proposal_cooldown_hours <= 0:
+            return set()
+
+        now = datetime.now(timezone.utc)
+        recent: set[tuple[str, str, str]] = set()
+        for proposal in prior_proposals:
+            created_at = self._parse_timestamp(
+                proposal.get("created_at")
+                or proposal.get("updated_at")
+                or proposal.get("timestamp")
+            )
+            if created_at is None:
+                continue
+            age_hours = (now - created_at).total_seconds() / 3600
+            if age_hours > self.proposal_cooldown_hours:
+                continue
+            recent.add(
+                (
+                    proposal.get("proposal_type", ""),
+                    proposal.get("domain", ""),
+                    proposal.get("trigger", ""),
+                )
+            )
+        return recent
+
+    def _parse_timestamp(self, value: Any) -> datetime | None:
+        """Parse an ISO timestamp into an aware datetime."""
+        if not value or not isinstance(value, str):
+            return None
+        try:
+            normalized = value.replace("Z", "+00:00")
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
 
     def _proposal_rank(self, proposal: dict[str, Any]) -> tuple[int, int, str]:
         """Prefer high-priority proposals, then broader code-impact types, then recency."""

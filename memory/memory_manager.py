@@ -29,6 +29,7 @@ class MemoryManager:
         self.self_improvement = SelfImprovementManager(
             self.long,
             retrieval_limit=config.get("interaction_retrieval_limit", 10),
+            proposal_cooldown_hours=config.get("improvement_proposal_cooldown_hours", 24),
         )
 
     async def store(self, role: str, content: str, tags: list[str] | None = None) -> None:

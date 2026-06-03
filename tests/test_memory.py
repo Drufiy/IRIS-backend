@@ -446,3 +446,77 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(updated["status"], "in_progress")
             refreshed = await manager.read_improvement_proposals()
             self.assertEqual(refreshed[0]["status"], "in_progress")
+
+    async def test_memory_manager_suppresses_duplicate_proposals_within_cooldown(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "improvement_proposal_cooldown_hours": 24,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+
+            for _ in range(3):
+                await manager.record_interaction(
+                    user_input="delete the old deployment file",
+                    response="Sorry, something went wrong.",
+                    status="error",
+                    latency_seconds=1.0,
+                    action_summary="delete_file target deployment",
+                    error_message="permission denied",
+                )
+            proposals_after_first_wave = await manager.read_improvement_proposals()
+            self.assertEqual(len([p for p in proposals_after_first_wave if p["trigger"] == "repeated_failures"]), 1)
+
+            for _ in range(3):
+                await manager.record_interaction(
+                    user_input="delete the old deployment file",
+                    response="Sorry, something went wrong.",
+                    status="error",
+                    latency_seconds=1.0,
+                    action_summary="delete_file target deployment",
+                    error_message="permission denied",
+                )
+            proposals_after_second_wave = await manager.read_improvement_proposals()
+            self.assertEqual(len([p for p in proposals_after_second_wave if p["trigger"] == "repeated_failures"]), 1)
+
+    async def test_memory_manager_allows_repeat_proposals_when_cooldown_disabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "improvement_proposal_cooldown_hours": 0,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+
+            for _ in range(3):
+                await manager.record_interaction(
+                    user_input="delete the old deployment file",
+                    response="Sorry, something went wrong.",
+                    status="error",
+                    latency_seconds=1.0,
+                    action_summary="delete_file target deployment",
+                    error_message="permission denied",
+                )
+            for _ in range(3):
+                await manager.record_interaction(
+                    user_input="delete the old deployment file",
+                    response="Sorry, something went wrong.",
+                    status="error",
+                    latency_seconds=1.0,
+                    action_summary="delete_file target deployment",
+                    error_message="permission denied",
+                )
+
+            proposals = await manager.read_improvement_proposals()
+            self.assertGreaterEqual(len([p for p in proposals if p["trigger"] == "repeated_failures"]), 2)
