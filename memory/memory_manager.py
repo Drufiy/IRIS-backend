@@ -30,6 +30,8 @@ class MemoryManager:
             self.long,
             retrieval_limit=config.get("interaction_retrieval_limit", 10),
             proposal_cooldown_hours=config.get("improvement_proposal_cooldown_hours", 24),
+            proposal_stale_age_hours=config.get("improvement_proposal_stale_age_hours", 72),
+            human_review_escalation_threshold=config.get("improvement_human_review_escalation_threshold", 2),
         )
 
     async def store(self, role: str, content: str, tags: list[str] | None = None) -> None:
@@ -205,6 +207,10 @@ class MemoryManager:
     async def update_improvement_proposal(self, proposal_id: str, **updates) -> dict | None:
         """Update proposal status/metadata after explicit review or coding-agent execution."""
         return await self.self_improvement.update_improvement_proposal(proposal_id, **updates)
+
+    async def refresh_improvement_proposals(self) -> list[dict]:
+        """Age stale proposals and escalate repeated failures to human review."""
+        return await self.self_improvement.refresh_improvement_proposals()
 
     def _hint_rank(self, hint: dict) -> tuple[int, int]:
         """Prefer stronger chain hints, then keep general hints in stable priority buckets."""

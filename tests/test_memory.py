@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 import tempfile
 import unittest
 from pathlib import Path
@@ -520,3 +521,70 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
 
             proposals = await manager.read_improvement_proposals()
             self.assertGreaterEqual(len([p for p in proposals if p["trigger"] == "repeated_failures"]), 2)
+
+    async def test_memory_manager_ages_stale_pending_proposals_upward(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "improvement_proposal_stale_age_hours": 1,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+            stale_time = (datetime.now(timezone.utc) - timedelta(hours=3)).isoformat()
+            await manager.long.save_improvement_proposal(
+                {
+                    "id": "stale-1",
+                    "created_at": stale_time,
+                    "status": "pending",
+                    "proposal_type": "workflow_promotion",
+                    "domain": "browser",
+                    "trigger": "repeated_success_chain",
+                    "priority": "low",
+                    "title": "Promote stable browser workflow",
+                }
+            )
+
+            refreshed = await manager.refresh_improvement_proposals()
+            self.assertEqual(len(refreshed), 1)
+            proposals = await manager.read_improvement_proposals()
+            self.assertEqual(proposals[0]["priority"], "medium")
+            self.assertEqual(proposals[0]["stale_count"], 1)
+
+    async def test_memory_manager_flags_repeated_escalations_for_human_review(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "improvement_human_review_escalation_threshold": 2,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+            now = datetime.now(timezone.utc).isoformat()
+            for index in range(2):
+                await manager.long.save_improvement_proposal(
+                    {
+                        "id": f"esc-{index}",
+                        "created_at": now,
+                        "status": "escalated",
+                        "proposal_type": "code_change",
+                        "domain": "browser",
+                        "trigger": "repeated_failures",
+                        "priority": "high",
+                        "title": "Investigate repeated browser failures",
+                    }
+                )
+
+            refreshed = await manager.refresh_improvement_proposals()
+            self.assertEqual(len(refreshed), 2)
+            proposals = await manager.read_improvement_proposals()
+            self.assertTrue(all(proposal["status"] == "needs_human_review" for proposal in proposals))
+            self.assertIn("human review", proposals[0]["human_review_reason"].lower())

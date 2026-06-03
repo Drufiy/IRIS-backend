@@ -41,10 +41,14 @@ class SelfImprovementManager:
         long_term: LongTermMemory,
         retrieval_limit: int = 10,
         proposal_cooldown_hours: int = 24,
+        proposal_stale_age_hours: int = 72,
+        human_review_escalation_threshold: int = 2,
     ) -> None:
         self.long_term = long_term
         self.retrieval_limit = retrieval_limit
         self.proposal_cooldown_hours = proposal_cooldown_hours
+        self.proposal_stale_age_hours = proposal_stale_age_hours
+        self.human_review_escalation_threshold = human_review_escalation_threshold
 
     async def record_interaction(
         self,
@@ -117,6 +121,7 @@ class SelfImprovementManager:
         allowed_types: tuple[str, ...] = ("code_change", "performance_tuning", "workflow_promotion"),
     ) -> dict[str, Any] | None:
         """Pick the highest-value proposal that is safe to hand to the coding agent."""
+        await self.refresh_improvement_proposals()
         proposals = await self.long_term.read_improvement_proposals()
         candidates = [
             proposal
@@ -128,6 +133,59 @@ class SelfImprovementManager:
             return None
         candidates.sort(key=self._proposal_rank, reverse=True)
         return dict(candidates[0])
+
+    async def refresh_improvement_proposals(self) -> list[dict[str, Any]]:
+        """Age pending proposals upward and flag repeated escalations for human review."""
+        proposals = await self.long_term.read_improvement_proposals()
+        now = datetime.now(timezone.utc)
+        refreshed: list[dict[str, Any]] = []
+
+        escalation_counts: dict[tuple[str, str, str], int] = {}
+        for proposal in proposals:
+            if proposal.get("status") != "escalated":
+                continue
+            key = self._proposal_identity_key(proposal)
+            escalation_counts[key] = escalation_counts.get(key, 0) + 1
+
+        for proposal in proposals:
+            updates: dict[str, Any] = {}
+            created_at = self._parse_timestamp(
+                proposal.get("created_at")
+                or proposal.get("updated_at")
+                or proposal.get("timestamp")
+            )
+            age_hours = None if created_at is None else (now - created_at).total_seconds() / 3600
+
+            if (
+                proposal.get("status") == "pending"
+                and age_hours is not None
+                and self.proposal_stale_age_hours > 0
+                and age_hours >= self.proposal_stale_age_hours
+            ):
+                current_priority = proposal.get("priority", "low")
+                promoted_priority = self._promote_priority(current_priority)
+                stale_count = int(proposal.get("stale_count", 0)) + 1
+                if promoted_priority != current_priority or stale_count != proposal.get("stale_count", 0):
+                    updates["priority"] = promoted_priority
+                    updates["stale_count"] = stale_count
+                    updates["updated_at"] = now.isoformat()
+
+            escalation_key = self._proposal_identity_key(proposal)
+            if (
+                proposal.get("status") == "escalated"
+                and escalation_counts.get(escalation_key, 0) >= self.human_review_escalation_threshold
+            ):
+                updates["status"] = "needs_human_review"
+                updates["human_review_reason"] = (
+                    "Similar self-improvement proposals have escalated repeatedly and now need human review."
+                )
+                updates["updated_at"] = now.isoformat()
+
+            if updates:
+                refreshed_proposal = await self.long_term.update_improvement_proposal(proposal["id"], **updates)
+                refreshed.append(refreshed_proposal or dict(proposal, **updates))
+
+        return refreshed
 
     async def retrieve_lessons(self, query: str, limit: int | None = None) -> list[dict[str, Any]]:
         """Find the most relevant stored lessons for a new task."""
@@ -614,4 +672,20 @@ class SelfImprovementManager:
             priority_rank.get(proposal.get("priority", "low"), 0),
             type_rank.get(proposal.get("proposal_type", ""), 0),
             proposal.get("created_at", ""),
+        )
+
+    def _promote_priority(self, priority: str) -> str:
+        """Promote a proposal priority by one level, capping at high."""
+        if priority == "low":
+            return "medium"
+        if priority == "medium":
+            return "high"
+        return "high"
+
+    def _proposal_identity_key(self, proposal: dict[str, Any]) -> tuple[str, str, str]:
+        """Return the stable identity key used for dedupe and escalation grouping."""
+        return (
+            proposal.get("proposal_type", ""),
+            proposal.get("domain", ""),
+            proposal.get("trigger", ""),
         )
