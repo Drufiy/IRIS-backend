@@ -580,6 +580,69 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["proposal"]["id"], "proposal-auto")
 
+    async def test_agent_manager_runs_bounded_autonomous_self_improvement_once(self) -> None:
+        manual_proposal = {
+            "id": "proposal-manual",
+            "status": "pending",
+            "priority": "high",
+            "proposal_type": "code_change",
+            "title": "Investigate repeated browser failures",
+            "approval_policy": {"mode": "manual", "requires_human_approval": True},
+        }
+        auto_proposal = {
+            "id": "proposal-auto",
+            "status": "pending",
+            "priority": "low",
+            "proposal_type": "workflow_promotion",
+            "title": "Promote stable browser workflow",
+            "approval_policy": {"mode": "auto_eligible", "requires_human_approval": False},
+        }
+        memory = FakeMemory(proposals=[manual_proposal, auto_proposal])
+        coding_agent = FakeProposalCodingAgent()
+        manager = AgentManager(
+            llm=FakeLLM([]),
+            memory=memory,
+            action_router=FakeActionRouter(),
+            browser_agent=FakeBrowser(),
+            coding_agent=coding_agent,
+            tts=None,
+        )
+
+        result = await manager.run_bounded_self_improvement_loop("C:/tmp/repo")
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(len(result["processed"]), 1)
+        self.assertEqual(result["processed"][0]["proposal"]["id"], "proposal-auto")
+        self.assertEqual(coding_agent.calls[0][0]["id"], "proposal-auto")
+        self.assertEqual(memory.proposals[0]["status"], "pending")
+        self.assertEqual(memory.proposals[1]["status"], "completed")
+
+    async def test_agent_manager_bounded_loop_stops_after_failed_attempt(self) -> None:
+        auto_proposal = {
+            "id": "proposal-auto",
+            "status": "pending",
+            "priority": "low",
+            "proposal_type": "workflow_promotion",
+            "title": "Promote stable browser workflow",
+            "approval_policy": {"mode": "auto_eligible", "requires_human_approval": False},
+        }
+        memory = FakeMemory(proposals=[auto_proposal])
+        coding_agent = FakeProposalCodingAgent(result={"status": "escalate", "message": "Need help."})
+        manager = AgentManager(
+            llm=FakeLLM([]),
+            memory=memory,
+            action_router=FakeActionRouter(),
+            browser_agent=FakeBrowser(),
+            coding_agent=coding_agent,
+            tts=None,
+        )
+
+        result = await manager.run_bounded_self_improvement_loop("C:/tmp/repo")
+
+        self.assertEqual(result["status"], "partial")
+        self.assertEqual(len(result["processed"]), 1)
+        self.assertEqual(result["processed"][0]["status"], "escalate")
+
     async def test_executor_returns_structured_trace_summary(self) -> None:
         executor = ExecutorAgent(FakeActionRouter(), FakeBrowser(texts=["Loaded"]), coding_agent=None, tts=None)
 
