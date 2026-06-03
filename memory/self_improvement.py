@@ -36,9 +36,19 @@ class SelfImprovementManager:
         "you",
     }
 
-    def __init__(self, long_term: LongTermMemory, retrieval_limit: int = 10) -> None:
+    def __init__(
+        self,
+        long_term: LongTermMemory,
+        retrieval_limit: int = 10,
+        proposal_cooldown_hours: int = 24,
+        proposal_stale_age_hours: int = 72,
+        human_review_escalation_threshold: int = 2,
+    ) -> None:
         self.long_term = long_term
         self.retrieval_limit = retrieval_limit
+        self.proposal_cooldown_hours = proposal_cooldown_hours
+        self.proposal_stale_age_hours = proposal_stale_age_hours
+        self.human_review_escalation_threshold = human_review_escalation_threshold
 
     async def record_interaction(
         self,
@@ -54,6 +64,7 @@ class SelfImprovementManager:
     ) -> dict[str, Any]:
         """Create and store a structured interaction record."""
         prior_interactions = await self.long_term.read_interactions()
+        prior_proposals = await self.long_term.read_improvement_proposals()
         record = {
             "id": str(uuid4()),
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -67,8 +78,40 @@ class SelfImprovementManager:
             "timing_breakdown": self._normalize_timings(timing_breakdown or {}),
         }
         await self.long_term.save_interaction(record)
+        regression_targets = self._find_regressed_proposals(record, prior_proposals)
+        for proposal in regression_targets:
+            proposal_id = proposal.get("id", "")
+            if not proposal_id:
+                continue
+            if proposal.get("status") != "completed":
+                continue
+            regression_count = int(proposal.get("regression_count", 0)) + 1
+            await self.long_term.update_improvement_proposal(
+                proposal_id,
+                status="regressed",
+                regression_count=regression_count,
+                updated_at=datetime.now(timezone.utc).isoformat(),
+            )
+            await self.long_term.append_improvement_proposal_history(
+                proposal_id,
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "event": "regression_detected",
+                    "status": "regressed",
+                    "message": "A similar interaction regressed after this proposal had been completed.",
+                    "interaction_id": record["id"],
+                },
+            )
         reflection = self._build_reflection(record, prior_interactions=prior_interactions)
         await self.long_term.save_reflection(reflection)
+        for proposal in self._build_improvement_proposals(
+            record,
+            reflection,
+            prior_interactions=prior_interactions,
+            prior_proposals=prior_proposals,
+            regression_targets=regression_targets,
+        ):
+            await self.long_term.save_improvement_proposal(proposal)
         return record
 
     async def read_interactions(self, limit: int | None = None) -> list[dict[str, Any]]:
@@ -84,6 +127,139 @@ class SelfImprovementManager:
         if limit is None:
             return reflections
         return reflections[-limit:]
+
+    async def read_improvement_proposals(self, limit: int | None = None) -> list[dict[str, Any]]:
+        """Return stored self-improvement proposals, oldest to newest by default."""
+        proposals = [self._with_outcome_metadata(proposal) for proposal in await self.long_term.read_improvement_proposals()]
+        if limit is None:
+            return proposals
+        return proposals[-limit:]
+
+    async def summarize_improvement_proposals(self, *, limit_per_bucket: int = 5) -> dict[str, Any]:
+        """Build a dashboard-friendly summary of the current proposal queue."""
+        proposals = await self.read_improvement_proposals()
+        counts: dict[str, int] = {}
+        for proposal in proposals:
+            status = proposal.get("status", "unknown")
+            counts[status] = counts.get(status, 0) + 1
+
+        pending = [proposal for proposal in proposals if proposal.get("status") == "pending"]
+        auto_eligible = [
+            proposal
+            for proposal in pending
+            if proposal.get("approval_policy", {}).get("mode") == "auto_eligible"
+            and not proposal.get("approval_policy", {}).get("requires_human_approval", True)
+        ]
+        human_review = [proposal for proposal in proposals if proposal.get("status") == "needs_human_review"]
+        regressed = [proposal for proposal in proposals if proposal.get("status") == "regressed"]
+        completed = [proposal for proposal in proposals if proposal.get("status") == "completed"]
+
+        return {
+            "totals": {
+                "all": len(proposals),
+                "pending": len(pending),
+                "auto_eligible": len(auto_eligible),
+                "needs_human_review": len(human_review),
+                "regressed": len(regressed),
+                "completed": len(completed),
+            },
+            "status_counts": counts,
+            "top_pending": self._summarize_proposal_bucket(pending, limit=limit_per_bucket),
+            "top_auto_eligible": self._summarize_proposal_bucket(auto_eligible, limit=limit_per_bucket),
+            "needs_human_review": self._summarize_proposal_bucket(human_review, limit=limit_per_bucket),
+            "regressed": self._summarize_proposal_bucket(regressed, limit=limit_per_bucket),
+            "recent_completed": self._summarize_proposal_bucket(completed, limit=limit_per_bucket),
+        }
+
+    async def update_improvement_proposal(self, proposal_id: str, **updates: Any) -> dict[str, Any] | None:
+        """Update the stored state of a proposal after review or execution."""
+        return await self.long_term.update_improvement_proposal(proposal_id, **updates)
+
+    async def append_improvement_proposal_history(
+        self,
+        proposal_id: str,
+        event: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Append a history event to a stored proposal."""
+        return await self.long_term.append_improvement_proposal_history(proposal_id, event)
+
+    async def select_next_proposal_for_coding(
+        self,
+        *,
+        allowed_statuses: tuple[str, ...] = ("pending",),
+        allowed_types: tuple[str, ...] = ("code_change", "performance_tuning", "workflow_promotion"),
+    ) -> dict[str, Any] | None:
+        """Pick the highest-value proposal that is safe to hand to the coding agent."""
+        await self.refresh_improvement_proposals()
+        proposals = await self.long_term.read_improvement_proposals()
+        candidates = [
+            self._with_outcome_metadata(proposal)
+            for proposal in proposals
+            if proposal.get("status") in allowed_statuses
+            and proposal.get("proposal_type") in allowed_types
+        ]
+        if not candidates:
+            return None
+        candidates.sort(key=self._proposal_rank, reverse=True)
+        return dict(candidates[0])
+
+    async def refresh_improvement_proposals(self) -> list[dict[str, Any]]:
+        """Age pending proposals upward, flag repeated escalations, and refresh outcome scoring."""
+        proposals = await self.long_term.read_improvement_proposals()
+        now = datetime.now(timezone.utc)
+        refreshed: list[dict[str, Any]] = []
+
+        escalation_counts: dict[tuple[str, str, str], int] = {}
+        for proposal in proposals:
+            if proposal.get("status") != "escalated":
+                continue
+            key = self._proposal_identity_key(proposal)
+            escalation_counts[key] = escalation_counts.get(key, 0) + 1
+
+        for proposal in proposals:
+            updates: dict[str, Any] = {}
+            created_at = self._parse_timestamp(
+                proposal.get("created_at")
+                or proposal.get("updated_at")
+                or proposal.get("timestamp")
+            )
+            age_hours = None if created_at is None else (now - created_at).total_seconds() / 3600
+
+            if (
+                proposal.get("status") == "pending"
+                and age_hours is not None
+                and self.proposal_stale_age_hours > 0
+                and age_hours >= self.proposal_stale_age_hours
+            ):
+                current_priority = proposal.get("priority", "low")
+                promoted_priority = self._promote_priority(current_priority)
+                stale_count = int(proposal.get("stale_count", 0)) + 1
+                if promoted_priority != current_priority or stale_count != proposal.get("stale_count", 0):
+                    updates["priority"] = promoted_priority
+                    updates["stale_count"] = stale_count
+                    updates["updated_at"] = now.isoformat()
+
+            escalation_key = self._proposal_identity_key(proposal)
+            if (
+                proposal.get("status") == "escalated"
+                and escalation_counts.get(escalation_key, 0) >= self.human_review_escalation_threshold
+            ):
+                updates["status"] = "needs_human_review"
+                updates["human_review_reason"] = (
+                    "Similar self-improvement proposals have escalated repeatedly and now need human review."
+                )
+                updates["updated_at"] = now.isoformat()
+
+            scored_proposal = self._with_outcome_metadata(dict(proposal, **updates))
+            for field in ("outcome_score", "outcome_confidence", "last_outcome_status", "outcome_summary"):
+                if proposal.get(field) != scored_proposal.get(field):
+                    updates[field] = scored_proposal[field]
+
+            if updates:
+                refreshed_proposal = await self.long_term.update_improvement_proposal(proposal["id"], **updates)
+                refreshed.append(refreshed_proposal or dict(proposal, **updates))
+
+        return refreshed
 
     async def retrieve_lessons(self, query: str, limit: int | None = None) -> list[dict[str, Any]]:
         """Find the most relevant stored lessons for a new task."""
@@ -141,6 +317,151 @@ class SelfImprovementManager:
             "hints": hints,
             "source_status": status,
         }
+
+    def _build_improvement_proposals(
+        self,
+        record: dict[str, Any],
+        reflection: dict[str, Any],
+        *,
+        prior_interactions: list[dict[str, Any]],
+        prior_proposals: list[dict[str, Any]],
+        regression_targets: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Create reviewable improvement proposals from repeated failures or latency patterns."""
+        proposals: list[dict[str, Any]] = []
+        user_input = record.get("user_input", "")
+        action_summary = record.get("action_summary", "")
+        timing_breakdown = record.get("timing_breakdown", {})
+        domain = reflection.get("domain", "general")
+        repeated_failures = self._count_repeated_failures(record, prior_interactions)
+        repeated_successes = self._count_repeated_successes(record, prior_interactions)
+        regression_detected = bool(regression_targets)
+        regressed_ids = [proposal.get("id", "") for proposal in regression_targets if proposal.get("id")]
+
+        if repeated_failures >= 2:
+            proposal_type = "code_change" if domain in {"browser", "coding", "files", "auth"} else "behavior_tuning"
+            approval_policy = self._approval_policy_for(
+                proposal_type,
+                domain,
+                priority="high",
+                regression_detected=regression_detected,
+            )
+            proposals.append(
+                {
+                    "id": str(uuid4()),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "status": "pending",
+                    "proposal_type": proposal_type,
+                    "domain": domain,
+                    "source_interaction_id": record["id"],
+                    "trigger": "repeated_failures",
+                    "priority": "high",
+                    "approval_policy": approval_policy,
+                    "title": f"Investigate repeated {domain} failures",
+                    "summary": (
+                        "Similar tasks have failed repeatedly. Review the failing flow and add a targeted fix "
+                        "instead of retrying the same approach."
+                    ),
+                    "evidence": {
+                        "user_input": user_input,
+                        "action_summary": action_summary,
+                        "error_message": record.get("error_message", ""),
+                        "repeated_failures": repeated_failures,
+                    },
+                    "suggested_scope": self._suggest_scope(domain, action_summary),
+                    "suggested_hints": [hint["value"] for hint in reflection.get("hints", [])],
+                    "execution_history": [],
+                    "attempt_count": 0,
+                    "regression_detected": regression_detected,
+                    "related_regressed_proposal_ids": regressed_ids,
+                }
+            )
+
+        if float(record.get("latency_seconds", 0.0)) >= 5:
+            slowest_stage = self._slowest_stage(timing_breakdown)
+            approval_policy = self._approval_policy_for(
+                "performance_tuning",
+                domain,
+                priority="medium",
+                regression_detected=regression_detected,
+            )
+            proposals.append(
+                {
+                    "id": str(uuid4()),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "status": "pending",
+                    "proposal_type": "performance_tuning",
+                    "domain": domain,
+                    "source_interaction_id": record["id"],
+                    "trigger": "slow_task",
+                    "priority": "medium",
+                    "approval_policy": approval_policy,
+                    "title": f"Reduce latency in {domain} flow",
+                    "summary": (
+                        "This task was noticeably slow. Review the slowest stage and trim context, actions, "
+                        "or response length before attempting deeper architectural changes."
+                    ),
+                    "evidence": {
+                        "user_input": user_input,
+                        "action_summary": action_summary,
+                        "latency_seconds": record.get("latency_seconds", 0.0),
+                        "slowest_stage": slowest_stage,
+                        "timing_breakdown": timing_breakdown,
+                    },
+                    "suggested_scope": self._suggest_scope(domain, action_summary),
+                    "suggested_hints": [hint["value"] for hint in reflection.get("hints", []) if hint.get("type") == "performance"],
+                    "execution_history": [],
+                    "attempt_count": 0,
+                    "regression_detected": regression_detected,
+                    "related_regressed_proposal_ids": regressed_ids,
+                }
+            )
+
+        if repeated_successes >= 2:
+            chain_steps = self._extract_chain_steps(action_summary)
+            if len(chain_steps) >= 2:
+                approval_policy = self._approval_policy_for(
+                    "workflow_promotion",
+                    domain,
+                    priority="low",
+                    regression_detected=regression_detected,
+                )
+                proposals.append(
+                    {
+                        "id": str(uuid4()),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "status": "pending",
+                        "proposal_type": "workflow_promotion",
+                        "domain": domain,
+                        "source_interaction_id": record["id"],
+                        "trigger": "repeated_success_chain",
+                        "priority": "low",
+                        "approval_policy": approval_policy,
+                        "title": f"Promote stable {domain} workflow",
+                        "summary": (
+                            "A similar multi-step workflow has succeeded repeatedly. Consider promoting it into "
+                            "a stronger built-in heuristic or planner rule."
+                        ),
+                        "evidence": {
+                            "user_input": user_input,
+                            "action_summary": action_summary,
+                            "repeated_successes": repeated_successes + 1,
+                            "chain": " -> ".join(chain_steps),
+                        },
+                        "suggested_scope": self._suggest_scope(domain, action_summary),
+                        "suggested_hints": [hint["value"] for hint in reflection.get("hints", []) if hint.get("type") in {"chain", "pattern"}],
+                        "execution_history": [],
+                        "attempt_count": 0,
+                        "regression_detected": regression_detected,
+                        "related_regressed_proposal_ids": regressed_ids,
+                    }
+                )
+
+        return self._dedupe_proposals(
+            proposals,
+            prior_interactions=prior_interactions,
+            prior_proposals=prior_proposals,
+        )
 
     def _tokens(self, text: str) -> set[str]:
         return {
@@ -369,3 +690,272 @@ class SelfImprovementManager:
         if not filtered:
             return ""
         return max(filtered, key=filtered.get)
+
+    def _suggest_scope(self, domain: str, action_summary: str) -> list[str]:
+        """Map a domain or action trace to the most likely modules to inspect."""
+        scope_map = {
+            "browser": ["browser/", "agents/executor.py", "agents/planner.py"],
+            "coding": ["agents/coding_agent.py", "agents/agent_manager.py"],
+            "files": ["actions/file_actions.py", "actions/safety.py"],
+            "auth": ["browser/", "browser/login_handler.py", "agents/executor.py"],
+            "email": ["actions/email_actions.py", "agents/executor.py"],
+            "todo": ["actions/todo_actions.py", "agents/planner.py"],
+            "weather": ["actions/weather_actions.py", "agents/planner.py"],
+            "general": ["agents/planner.py", "agents/executor.py", "memory/self_improvement.py"],
+        }
+        scope = list(scope_map.get(domain, scope_map["general"]))
+        if "voice" in action_summary.lower() and "voice/" not in scope:
+            scope.append("voice/")
+        return scope
+
+    def _dedupe_proposals(
+        self,
+        proposals: list[dict[str, Any]],
+        *,
+        prior_interactions: list[dict[str, Any]],
+        prior_proposals: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Suppress identical proposals when a similar one already exists very recently."""
+        del prior_interactions  # reserved for future ranking against recency windows
+        deduped: list[dict[str, Any]] = []
+        seen: set[tuple[str, str, str]] = set()
+        recent_existing = self._recent_proposal_keys(prior_proposals)
+        for proposal in proposals:
+            key = (
+                proposal.get("proposal_type", ""),
+                proposal.get("domain", ""),
+                proposal.get("trigger", ""),
+            )
+            if key in seen:
+                continue
+            if key in recent_existing:
+                continue
+            seen.add(key)
+            deduped.append(proposal)
+        return deduped
+
+    def _recent_proposal_keys(self, prior_proposals: list[dict[str, Any]]) -> set[tuple[str, str, str]]:
+        """Return proposal identity keys still inside the duplicate-suppression cooldown window."""
+        if self.proposal_cooldown_hours <= 0:
+            return set()
+
+        now = datetime.now(timezone.utc)
+        recent: set[tuple[str, str, str]] = set()
+        for proposal in prior_proposals:
+            created_at = self._parse_timestamp(
+                proposal.get("created_at")
+                or proposal.get("updated_at")
+                or proposal.get("timestamp")
+            )
+            if created_at is None:
+                continue
+            age_hours = (now - created_at).total_seconds() / 3600
+            if age_hours > self.proposal_cooldown_hours:
+                continue
+            recent.add(
+                (
+                    proposal.get("proposal_type", ""),
+                    proposal.get("domain", ""),
+                    proposal.get("trigger", ""),
+                )
+            )
+        return recent
+
+    def _parse_timestamp(self, value: Any) -> datetime | None:
+        """Parse an ISO timestamp into an aware datetime."""
+        if not value or not isinstance(value, str):
+            return None
+        try:
+            normalized = value.replace("Z", "+00:00")
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    def _proposal_rank(self, proposal: dict[str, Any]) -> tuple[int, float, int, int, str]:
+        """Prefer proposals with better measured outcomes, then priority, type, and recency."""
+        priority_rank = {"high": 3, "medium": 2, "low": 1}
+        type_rank = {"code_change": 3, "performance_tuning": 2, "workflow_promotion": 1}
+        return (
+            int(proposal.get("outcome_score", 0)),
+            float(proposal.get("outcome_confidence", 0.0)),
+            priority_rank.get(proposal.get("priority", "low"), 0),
+            type_rank.get(proposal.get("proposal_type", ""), 0),
+            proposal.get("created_at", ""),
+        )
+
+    def _summarize_proposal_bucket(self, proposals: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
+        """Return compact, sorted proposal summaries for dashboards and review surfaces."""
+        ranked = [self._with_outcome_metadata(proposal) for proposal in proposals]
+        ranked.sort(key=self._proposal_rank, reverse=True)
+        return [
+            {
+                "id": proposal.get("id", ""),
+                "title": proposal.get("title", ""),
+                "status": proposal.get("status", "unknown"),
+                "priority": proposal.get("priority", "low"),
+                "proposal_type": proposal.get("proposal_type", ""),
+                "domain": proposal.get("domain", "general"),
+                "trigger": proposal.get("trigger", ""),
+                "approval_mode": proposal.get("approval_policy", {}).get("mode", "manual"),
+                "outcome_score": proposal.get("outcome_score", 0),
+                "outcome_confidence": proposal.get("outcome_confidence", 0.0),
+                "last_outcome_status": proposal.get("last_outcome_status", proposal.get("status", "unknown")),
+                "created_at": proposal.get("created_at", ""),
+            }
+            for proposal in ranked[:limit]
+        ]
+
+    def _with_outcome_metadata(self, proposal: dict[str, Any]) -> dict[str, Any]:
+        """Attach derived outcome scoring fields without mutating caller-owned proposal state."""
+        enriched = dict(proposal)
+        enriched.update(self._outcome_fields(enriched))
+        return enriched
+
+    def _outcome_fields(self, proposal: dict[str, Any]) -> dict[str, Any]:
+        """Score a proposal based on how well prior execution attempts actually paid off."""
+        history = proposal.get("execution_history", [])
+        successful_runs = 0
+        failed_runs = 0
+        regression_events = 0
+        last_outcome_status = proposal.get("status", "pending")
+
+        for event in history:
+            event_name = str(event.get("event", "")).lower()
+            event_status = str(event.get("status", "")).lower()
+            if event_name == "finished":
+                if event_status in {"completed", "ok", "success"}:
+                    successful_runs += 1
+                elif event_status:
+                    failed_runs += 1
+                last_outcome_status = event_status or last_outcome_status
+            elif event_name == "regression_detected":
+                regression_events += 1
+                last_outcome_status = "regressed"
+
+        regression_count = max(int(proposal.get("regression_count", 0)), regression_events)
+        stale_count = int(proposal.get("stale_count", 0))
+        status = str(proposal.get("status", "pending")).lower()
+
+        score = (successful_runs * 4) - (failed_runs * 3) - (regression_count * 5) - stale_count
+        if status == "completed":
+            score += 2
+        elif status == "escalated":
+            score -= 2
+        elif status == "needs_human_review":
+            score -= 3
+        elif status == "regressed":
+            score -= 4
+
+        evidence_points = successful_runs + failed_runs + regression_count
+        confidence = min(1.0, evidence_points / 3) if evidence_points else 0.0
+        attempt_count = max(int(proposal.get("attempt_count", 0)), successful_runs + failed_runs)
+
+        return {
+            "outcome_score": score,
+            "outcome_confidence": round(confidence, 2),
+            "last_outcome_status": last_outcome_status,
+            "outcome_summary": {
+                "successful_runs": successful_runs,
+                "failed_runs": failed_runs,
+                "regressions": regression_count,
+                "stale_count": stale_count,
+                "attempt_count": attempt_count,
+            },
+        }
+
+    def _approval_policy_for(
+        self,
+        proposal_type: str,
+        domain: str,
+        *,
+        priority: str,
+        regression_detected: bool = False,
+    ) -> dict[str, Any]:
+        """Define whether a proposal may run automatically or needs explicit human approval."""
+        risky_domains = {"browser", "auth", "files", "coding"}
+        if regression_detected:
+            return {
+                "mode": "manual",
+                "requires_human_approval": True,
+                "reason": "A similar self-improvement attempt regressed, so this proposal requires human review.",
+            }
+        if proposal_type == "code_change":
+            return {
+                "mode": "manual",
+                "requires_human_approval": True,
+                "reason": "Code-change proposals require explicit approval before IRIS edits the repo.",
+            }
+        if proposal_type == "performance_tuning" and domain in risky_domains:
+            return {
+                "mode": "manual",
+                "requires_human_approval": True,
+                "reason": "This performance proposal touches a higher-risk domain and should be reviewed first.",
+            }
+        if proposal_type == "workflow_promotion" and priority == "low":
+            return {
+                "mode": "auto_eligible",
+                "requires_human_approval": False,
+                "reason": "Low-risk workflow promotions can be auto-eligible after review.",
+            }
+        return {
+            "mode": "manual",
+            "requires_human_approval": True,
+            "reason": "This proposal should be reviewed before execution.",
+        }
+
+    def _promote_priority(self, priority: str) -> str:
+        """Promote a proposal priority by one level, capping at high."""
+        if priority == "low":
+            return "medium"
+        if priority == "medium":
+            return "high"
+        return "high"
+
+    def _proposal_identity_key(self, proposal: dict[str, Any]) -> tuple[str, str, str]:
+        """Return the stable identity key used for dedupe and escalation grouping."""
+        return (
+            proposal.get("proposal_type", ""),
+            proposal.get("domain", ""),
+            proposal.get("trigger", ""),
+        )
+
+    def _find_regressed_proposals(
+        self,
+        record: dict[str, Any],
+        prior_proposals: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Find completed proposals that appear to have regressed based on a new bad outcome."""
+        if record.get("status") == "success" and float(record.get("latency_seconds", 0.0)) < 5:
+            return []
+
+        record_domain = self._infer_domain(record.get("user_input", ""), record.get("action_summary", ""))
+        record_tokens = self._tokens(f"{record.get('user_input', '')} {record.get('action_summary', '')}")
+        matches: list[dict[str, Any]] = []
+        for proposal in prior_proposals:
+            if proposal.get("status") not in {"completed", "regressed"}:
+                continue
+            if proposal.get("domain") != record_domain:
+                continue
+            proposal_tokens = self._proposal_tokens(proposal)
+            if record_tokens and len(record_tokens & proposal_tokens) < 2:
+                continue
+            matches.append(proposal)
+        return matches
+
+    def _proposal_tokens(self, proposal: dict[str, Any]) -> set[str]:
+        """Extract coarse matching tokens from a stored proposal."""
+        evidence = proposal.get("evidence", {})
+        text = " ".join(
+            [
+                proposal.get("title", ""),
+                proposal.get("summary", ""),
+                evidence.get("user_input", ""),
+                evidence.get("action_summary", ""),
+                evidence.get("error_message", ""),
+                evidence.get("chain", ""),
+            ]
+        )
+        return self._tokens(text)

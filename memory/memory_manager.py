@@ -29,6 +29,9 @@ class MemoryManager:
         self.self_improvement = SelfImprovementManager(
             self.long,
             retrieval_limit=config.get("interaction_retrieval_limit", 10),
+            proposal_cooldown_hours=config.get("improvement_proposal_cooldown_hours", 24),
+            proposal_stale_age_hours=config.get("improvement_proposal_stale_age_hours", 72),
+            human_review_escalation_threshold=config.get("improvement_human_review_escalation_threshold", 2),
         )
 
     async def store(self, role: str, content: str, tags: list[str] | None = None) -> None:
@@ -189,6 +192,33 @@ class MemoryManager:
                 hints.append(dict(hint))
         hints.sort(key=self._hint_rank, reverse=True)
         return hints
+
+    async def read_improvement_proposals(self, limit: int | None = None, status: str | None = None) -> list[dict]:
+        """Expose queued self-improvement proposals for review or later coding-agent work."""
+        proposals = await self.self_improvement.read_improvement_proposals(limit=limit)
+        if status is None:
+            return proposals
+        return [proposal for proposal in proposals if proposal.get("status") == status]
+
+    async def summarize_improvement_proposals(self, *, limit_per_bucket: int = 5) -> list[dict] | dict:
+        """Expose a dashboard-friendly summary of self-improvement proposals."""
+        return await self.self_improvement.summarize_improvement_proposals(limit_per_bucket=limit_per_bucket)
+
+    async def select_next_proposal_for_coding(self) -> dict | None:
+        """Return the next pending proposal that is appropriate for controlled coding-agent work."""
+        return await self.self_improvement.select_next_proposal_for_coding()
+
+    async def update_improvement_proposal(self, proposal_id: str, **updates) -> dict | None:
+        """Update proposal status/metadata after explicit review or coding-agent execution."""
+        return await self.self_improvement.update_improvement_proposal(proposal_id, **updates)
+
+    async def refresh_improvement_proposals(self) -> list[dict]:
+        """Age stale proposals and escalate repeated failures to human review."""
+        return await self.self_improvement.refresh_improvement_proposals()
+
+    async def append_improvement_proposal_history(self, proposal_id: str, event: dict) -> dict | None:
+        """Record an execution-history event for a proposal."""
+        return await self.self_improvement.append_improvement_proposal_history(proposal_id, event)
 
     def _hint_rank(self, hint: dict) -> tuple[int, int]:
         """Prefer stronger chain hints, then keep general hints in stable priority buckets."""

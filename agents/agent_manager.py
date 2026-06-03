@@ -17,6 +17,7 @@ class AgentManager:
         self.llm     = llm
         self.memory  = memory
         self.planner = PlannerAgent(llm)
+        self.coding_agent = coding_agent
         self.executor = ExecutorAgent(action_router, browser_agent, coding_agent, tts)
         self._active_agents: list = []
 
@@ -77,9 +78,177 @@ class AgentManager:
         final_result["metadata"]["performance"] = performance_metadata
         return final_result
 
+    async def review_self_improvement_proposals(self, *, status: str = "pending", limit: int = 10) -> list[dict]:
+        """Return queued self-improvement proposals for inspection or approval."""
+        if not hasattr(self.memory, "read_improvement_proposals"):
+            return []
+        proposals = await self.memory.read_improvement_proposals(limit=limit, status=status)
+        return list(proposals)
+
+    async def inspect_self_improvement_queue(self, *, limit_per_bucket: int = 5) -> dict:
+        """Return a structured visibility view of proposal queue state and priority."""
+        if not hasattr(self.memory, "summarize_improvement_proposals"):
+            return {
+                "status": "unavailable",
+                "message": "Memory manager does not expose self-improvement queue summaries yet.",
+                "summary": None,
+            }
+        summary = await self.memory.summarize_improvement_proposals(limit_per_bucket=limit_per_bucket)
+        return {
+            "status": "ok",
+            "message": "Self-improvement queue summary ready.",
+            "summary": summary,
+        }
+
+    async def run_next_self_improvement(
+        self,
+        repo_path: str,
+        *,
+        approve: bool = False,
+        allow_auto: bool = False,
+    ) -> dict:
+        """
+        Review or execute the highest-priority pending self-improvement proposal.
+
+        When approve is False, returns a preview and leaves proposal state untouched.
+        When approve is True, hands the proposal to the coding agent and updates status.
+        """
+        if not hasattr(self.memory, "select_next_proposal_for_coding"):
+            return {
+                "status": "unavailable",
+                "message": "Memory manager does not support improvement proposals yet.",
+            }
+
+        proposal = await self.memory.select_next_proposal_for_coding()
+        if proposal is None:
+            return {
+                "status": "empty",
+                "message": "No pending self-improvement proposals are ready for coding.",
+                "proposal": None,
+            }
+
+        approval_policy = proposal.get("approval_policy", {})
+        requires_human_approval = bool(approval_policy.get("requires_human_approval", True))
+        is_auto_eligible = approval_policy.get("mode") == "auto_eligible"
+
+        if not approve and not (allow_auto and is_auto_eligible and not requires_human_approval):
+            return {
+                "status": "review",
+                "message": "Self-improvement proposal ready for review.",
+                "proposal": proposal,
+                "approval_policy": approval_policy,
+            }
+
+        if self.coding_agent is None:
+            return {
+                "status": "unavailable",
+                "message": "Coding agent is not configured for self-improvement execution.",
+                "proposal": proposal,
+                "approval_policy": approval_policy,
+            }
+
+        result = await self._execute_self_improvement_proposal(proposal, repo_path)
+
+        return {
+            "status": result.get("status", "unknown"),
+            "message": result.get("message", ""),
+            "proposal": proposal,
+            "result": result,
+            "approval_policy": approval_policy,
+        }
+
+    async def run_bounded_self_improvement_loop(
+        self,
+        repo_path: str,
+        *,
+        max_proposals: int = 1,
+    ) -> dict:
+        """
+        Run a tightly bounded autonomous self-improvement pass.
+
+        Safety rules:
+        - only auto-eligible proposals may run without explicit approval
+        - process at most `max_proposals` proposals
+        - stop immediately after a non-ok result
+        """
+        if self.coding_agent is None:
+            return {
+                "status": "unavailable",
+                "message": "Coding agent is not configured for autonomous self-improvement.",
+                "processed": [],
+                "skipped": [],
+            }
+
+        proposals = await self.review_self_improvement_proposals(status="pending", limit=50)
+        auto_candidates = [
+            proposal
+            for proposal in proposals
+            if proposal.get("approval_policy", {}).get("mode") == "auto_eligible"
+            and not proposal.get("approval_policy", {}).get("requires_human_approval", True)
+        ]
+        auto_candidates.sort(key=self._proposal_sort_key, reverse=True)
+
+        if not auto_candidates:
+            return {
+                "status": "empty",
+                "message": "No auto-eligible self-improvement proposals are ready to run.",
+                "processed": [],
+                "skipped": proposals,
+            }
+
+        processed: list[dict] = []
+        for proposal in auto_candidates[: max(1, max_proposals)]:
+            execution_result = await self._execute_self_improvement_proposal(proposal, repo_path)
+            result = {
+                "status": execution_result.get("status", "unknown"),
+                "message": execution_result.get("message", ""),
+                "proposal": proposal,
+                "result": execution_result,
+                "approval_policy": proposal.get("approval_policy", {}),
+            }
+            processed.append(result)
+            if execution_result.get("status") != "ok":
+                return {
+                    "status": "partial",
+                    "message": "Autonomous self-improvement stopped after a non-successful attempt.",
+                    "processed": processed,
+                    "skipped": proposals,
+                }
+
+        return {
+            "status": "ok",
+            "message": f"Autonomous self-improvement processed {len(processed)} proposal(s).",
+            "processed": processed,
+            "skipped": [proposal for proposal in proposals if proposal not in auto_candidates[: max(1, max_proposals)]],
+        }
+
     async def cancel_all(self) -> None:
         """Cancel all active agents."""
         for agent in self._active_agents:
             await agent.cancel()
         self._active_agents.clear()
         logger.info("All agents cancelled")
+
+    async def _execute_self_improvement_proposal(self, proposal: dict, repo_path: str) -> dict:
+        """Run a specific proposal through the coding agent with active-agent bookkeeping."""
+        self._active_agents.append(self.coding_agent)
+        try:
+            return await self.coding_agent.run_proposal(
+                proposal,
+                repo_path,
+                memory_manager=self.memory,
+            )
+        finally:
+            self._active_agents = [agent for agent in self._active_agents if agent is not self.coding_agent]
+
+    def _proposal_sort_key(self, proposal: dict) -> tuple[int, float, int, int, str]:
+        """Prefer proposals with better measured outcomes, then priority, type, and recency."""
+        priority_rank = {"high": 3, "medium": 2, "low": 1}
+        type_rank = {"code_change": 3, "performance_tuning": 2, "workflow_promotion": 1}
+        return (
+            int(proposal.get("outcome_score", 0)),
+            float(proposal.get("outcome_confidence", 0.0)),
+            priority_rank.get(proposal.get("priority", "low"), 0),
+            type_rank.get(proposal.get("proposal_type", ""), 0),
+            proposal.get("created_at", ""),
+        )
