@@ -135,6 +135,42 @@ class SelfImprovementManager:
             return proposals
         return proposals[-limit:]
 
+    async def summarize_improvement_proposals(self, *, limit_per_bucket: int = 5) -> dict[str, Any]:
+        """Build a dashboard-friendly summary of the current proposal queue."""
+        proposals = await self.read_improvement_proposals()
+        counts: dict[str, int] = {}
+        for proposal in proposals:
+            status = proposal.get("status", "unknown")
+            counts[status] = counts.get(status, 0) + 1
+
+        pending = [proposal for proposal in proposals if proposal.get("status") == "pending"]
+        auto_eligible = [
+            proposal
+            for proposal in pending
+            if proposal.get("approval_policy", {}).get("mode") == "auto_eligible"
+            and not proposal.get("approval_policy", {}).get("requires_human_approval", True)
+        ]
+        human_review = [proposal for proposal in proposals if proposal.get("status") == "needs_human_review"]
+        regressed = [proposal for proposal in proposals if proposal.get("status") == "regressed"]
+        completed = [proposal for proposal in proposals if proposal.get("status") == "completed"]
+
+        return {
+            "totals": {
+                "all": len(proposals),
+                "pending": len(pending),
+                "auto_eligible": len(auto_eligible),
+                "needs_human_review": len(human_review),
+                "regressed": len(regressed),
+                "completed": len(completed),
+            },
+            "status_counts": counts,
+            "top_pending": self._summarize_proposal_bucket(pending, limit=limit_per_bucket),
+            "top_auto_eligible": self._summarize_proposal_bucket(auto_eligible, limit=limit_per_bucket),
+            "needs_human_review": self._summarize_proposal_bucket(human_review, limit=limit_per_bucket),
+            "regressed": self._summarize_proposal_bucket(regressed, limit=limit_per_bucket),
+            "recent_completed": self._summarize_proposal_bucket(completed, limit=limit_per_bucket),
+        }
+
     async def update_improvement_proposal(self, proposal_id: str, **updates: Any) -> dict[str, Any] | None:
         """Update the stored state of a proposal after review or execution."""
         return await self.long_term.update_improvement_proposal(proposal_id, **updates)
@@ -749,6 +785,28 @@ class SelfImprovementManager:
             type_rank.get(proposal.get("proposal_type", ""), 0),
             proposal.get("created_at", ""),
         )
+
+    def _summarize_proposal_bucket(self, proposals: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
+        """Return compact, sorted proposal summaries for dashboards and review surfaces."""
+        ranked = [self._with_outcome_metadata(proposal) for proposal in proposals]
+        ranked.sort(key=self._proposal_rank, reverse=True)
+        return [
+            {
+                "id": proposal.get("id", ""),
+                "title": proposal.get("title", ""),
+                "status": proposal.get("status", "unknown"),
+                "priority": proposal.get("priority", "low"),
+                "proposal_type": proposal.get("proposal_type", ""),
+                "domain": proposal.get("domain", "general"),
+                "trigger": proposal.get("trigger", ""),
+                "approval_mode": proposal.get("approval_policy", {}).get("mode", "manual"),
+                "outcome_score": proposal.get("outcome_score", 0),
+                "outcome_confidence": proposal.get("outcome_confidence", 0.0),
+                "last_outcome_status": proposal.get("last_outcome_status", proposal.get("status", "unknown")),
+                "created_at": proposal.get("created_at", ""),
+            }
+            for proposal in ranked[:limit]
+        ]
 
     def _with_outcome_metadata(self, proposal: dict[str, Any]) -> dict[str, Any]:
         """Attach derived outcome scoring fields without mutating caller-owned proposal state."""

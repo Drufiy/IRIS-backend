@@ -834,3 +834,52 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertIsNotNone(next_proposal)
             self.assertEqual(next_proposal["id"], "workflow-good")
+
+    async def test_memory_manager_summarizes_improvement_queue(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+            now = datetime.now(timezone.utc).isoformat()
+            await manager.long.save_improvement_proposal(
+                {
+                    "id": "pending-1",
+                    "created_at": now,
+                    "status": "pending",
+                    "proposal_type": "workflow_promotion",
+                    "domain": "browser",
+                    "trigger": "repeated_success_chain",
+                    "priority": "low",
+                    "title": "Promote stable browser workflow",
+                    "approval_policy": {"mode": "auto_eligible", "requires_human_approval": False},
+                    "execution_history": [{"event": "finished", "status": "completed"}],
+                }
+            )
+            await manager.long.save_improvement_proposal(
+                {
+                    "id": "review-1",
+                    "created_at": now,
+                    "status": "needs_human_review",
+                    "proposal_type": "code_change",
+                    "domain": "browser",
+                    "trigger": "repeated_failures",
+                    "priority": "high",
+                    "title": "Investigate repeated browser failures",
+                    "approval_policy": {"mode": "manual", "requires_human_approval": True},
+                    "execution_history": [{"event": "finished", "status": "escalated"}],
+                }
+            )
+
+            summary = await manager.summarize_improvement_proposals(limit_per_bucket=3)
+            self.assertEqual(summary["totals"]["all"], 2)
+            self.assertEqual(summary["totals"]["pending"], 1)
+            self.assertEqual(summary["totals"]["needs_human_review"], 1)
+            self.assertEqual(summary["top_pending"][0]["id"], "pending-1")
+            self.assertEqual(summary["needs_human_review"][0]["id"], "review-1")

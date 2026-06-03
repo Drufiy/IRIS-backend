@@ -77,6 +77,18 @@ class FakeMemory:
             proposals = proposals[-limit:]
         return proposals
 
+    async def summarize_improvement_proposals(self, *, limit_per_bucket: int = 5) -> dict:
+        pending = [proposal for proposal in self.proposals if proposal.get("status") == "pending"]
+        return {
+            "totals": {"all": len(self.proposals), "pending": len(pending)},
+            "top_pending": pending[:limit_per_bucket],
+            "top_auto_eligible": [],
+            "needs_human_review": [],
+            "regressed": [],
+            "recent_completed": [],
+            "status_counts": {"pending": len(pending)},
+        }
+
     async def select_next_proposal_for_coding(self) -> dict | None:
         candidates = [proposal for proposal in self.proposals if proposal.get("status") == "pending"]
         if not candidates:
@@ -526,6 +538,29 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(preview["status"], "review")
         self.assertEqual(preview["proposal"]["id"], "proposal-1")
         self.assertTrue(preview["approval_policy"]["requires_human_approval"])
+
+    async def test_agent_manager_inspects_self_improvement_queue(self) -> None:
+        proposal = {
+            "id": "proposal-queue-1",
+            "status": "pending",
+            "priority": "medium",
+            "proposal_type": "workflow_promotion",
+            "title": "Promote stable browser workflow",
+            "approval_policy": {"mode": "auto_eligible", "requires_human_approval": False},
+        }
+        manager = AgentManager(
+            llm=FakeLLM([]),
+            memory=FakeMemory(proposals=[proposal]),
+            action_router=FakeActionRouter(),
+            browser_agent=FakeBrowser(),
+            coding_agent=None,
+            tts=None,
+        )
+
+        result = await manager.inspect_self_improvement_queue(limit_per_bucket=3)
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["summary"]["totals"]["all"], 1)
+        self.assertEqual(result["summary"]["top_pending"][0]["id"], "proposal-queue-1")
 
     async def test_agent_manager_executes_next_self_improvement_proposal_when_approved(self) -> None:
         proposal = {

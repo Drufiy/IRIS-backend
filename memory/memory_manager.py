@@ -200,6 +200,10 @@ class MemoryManager:
             return proposals
         return [proposal for proposal in proposals if proposal.get("status") == status]
 
+    async def summarize_improvement_proposals(self, *, limit_per_bucket: int = 5) -> list[dict] | dict:
+        """Expose a dashboard-friendly summary of self-improvement proposals."""
+        return await self.self_improvement.summarize_improvement_proposals(limit_per_bucket=limit_per_bucket)
+
     async def select_next_proposal_for_coding(self) -> dict | None:
         """Return the next pending proposal that is appropriate for controlled coding-agent work."""
         return await self.self_improvement.select_next_proposal_for_coding()

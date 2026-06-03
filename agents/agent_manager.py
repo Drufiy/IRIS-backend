@@ -85,6 +85,21 @@ class AgentManager:
         proposals = await self.memory.read_improvement_proposals(limit=limit, status=status)
         return list(proposals)
 
+    async def inspect_self_improvement_queue(self, *, limit_per_bucket: int = 5) -> dict:
+        """Return a structured visibility view of proposal queue state and priority."""
+        if not hasattr(self.memory, "summarize_improvement_proposals"):
+            return {
+                "status": "unavailable",
+                "message": "Memory manager does not expose self-improvement queue summaries yet.",
+                "summary": None,
+            }
+        summary = await self.memory.summarize_improvement_proposals(limit_per_bucket=limit_per_bucket)
+        return {
+            "status": "ok",
+            "message": "Self-improvement queue summary ready.",
+            "summary": summary,
+        }
+
     async def run_next_self_improvement(
         self,
         repo_path: str,
