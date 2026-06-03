@@ -45,9 +45,14 @@ class FakeStateManager:
 class FakeMemory:
     def __init__(self, hints: list[dict] | None = None) -> None:
         self.hints = hints or []
+        self.updates: list[tuple[str, dict]] = []
 
     async def get_planning_hints(self, query: str) -> list[dict]:
         return list(self.hints)
+
+    async def update_improvement_proposal(self, proposal_id: str, **updates) -> dict:
+        self.updates.append((proposal_id, dict(updates)))
+        return {"id": proposal_id, **updates}
 
 
 class FakeActionRouter:
@@ -141,6 +146,67 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(result["status"], "escalate")
             self.assertIn("Max debug iterations", result["message"])
+
+    async def test_coding_agent_builds_goal_from_proposal(self) -> None:
+        agent = CodingAgent(FakeLLM([]))
+        goal = agent._goal_from_proposal(
+            {
+                "title": "Reduce latency in browser flow",
+                "summary": "This task was slow.",
+                "domain": "browser",
+                "priority": "medium",
+                "suggested_scope": ["browser/", "agents/executor.py"],
+                "suggested_hints": ["prefer_fewer_actions", "keep_response_brief"],
+                "evidence": {
+                    "user_input": "check weather in browser",
+                    "action_summary": "browser:ok -> get_weather:ok",
+                    "slowest_stage": "execution_seconds",
+                },
+            }
+        )
+
+        self.assertIn("Proposal: Reduce latency in browser flow", goal)
+        self.assertIn("Suggested scope: browser/, agents/executor.py", goal)
+        self.assertIn("prefer_fewer_actions", goal)
+        self.assertIn("slowest_stage: execution_seconds", goal)
+
+    async def test_coding_agent_runs_proposal_and_updates_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "sample.py").write_text("print('old')\n", encoding="utf-8")
+            (repo / "tests").mkdir()
+            (repo / "tests" / "__init__.py").write_text("", encoding="utf-8")
+
+            llm = FakeLLM(
+                [
+                    '{"step":"write_file","action":"write_file","file_path":"sample.py","content":"print(\'new\')\\n","reasoning":"update"}',
+                    '{"step":"run_tests","action":"run_tests","content":"run tests","reasoning":"verify"}',
+                ]
+            )
+            memory = FakeMemory()
+
+            async def fake_test_runner(repo_path: str) -> dict:
+                return {"passed": True, "output": "OK"}
+
+            agent = CodingAgent(llm, test_runner=fake_test_runner)
+            proposal = {
+                "id": "proposal-123",
+                "title": "Investigate repeated browser failures",
+                "summary": "Tighten the browser flow.",
+                "domain": "browser",
+                "priority": "high",
+                "suggested_scope": ["browser/", "agents/executor.py"],
+                "suggested_hints": ["wait_for_page_and_retry_selector"],
+                "evidence": {"user_input": "check weather in browser", "action_summary": "browser:error"},
+            }
+
+            result = await agent.run_proposal(proposal, str(repo), memory_manager=memory)
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["proposal_id"], "proposal-123")
+            self.assertEqual(memory.updates[0], ("proposal-123", {"status": "in_progress"}))
+            self.assertEqual(memory.updates[-1][0], "proposal-123")
+            self.assertEqual(memory.updates[-1][1]["status"], "completed")
 
     async def test_planner_receives_structured_hints(self) -> None:
         llm = FakeLLM(['[{"id": 1, "action_type": "voice", "description": "ok", "params": {}}]'])

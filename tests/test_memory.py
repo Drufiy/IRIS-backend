@@ -413,3 +413,36 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(workflow_proposal["domain"], "browser")
             self.assertEqual(workflow_proposal["evidence"]["chain"], "browser -> get_weather")
             self.assertEqual(workflow_proposal["priority"], "low")
+
+    async def test_memory_manager_selects_next_pending_proposal_for_coding(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+
+            for _ in range(3):
+                await manager.record_interaction(
+                    user_input="delete the old deployment file",
+                    response="Sorry, something went wrong.",
+                    status="error",
+                    latency_seconds=1.0,
+                    action_summary="delete_file target deployment",
+                    error_message="permission denied",
+                )
+
+            next_proposal = await manager.select_next_proposal_for_coding()
+            self.assertIsNotNone(next_proposal)
+            self.assertEqual(next_proposal["trigger"], "repeated_failures")
+            self.assertEqual(next_proposal["priority"], "high")
+
+            updated = await manager.update_improvement_proposal(next_proposal["id"], status="in_progress")
+            self.assertEqual(updated["status"], "in_progress")
+            refreshed = await manager.read_improvement_proposals()
+            self.assertEqual(refreshed[0]["status"], "in_progress")

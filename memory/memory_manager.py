@@ -197,6 +197,14 @@ class MemoryManager:
             return proposals
         return [proposal for proposal in proposals if proposal.get("status") == status]
 
+    async def select_next_proposal_for_coding(self) -> dict | None:
+        """Return the next pending proposal that is appropriate for controlled coding-agent work."""
+        return await self.self_improvement.select_next_proposal_for_coding()
+
+    async def update_improvement_proposal(self, proposal_id: str, **updates) -> dict | None:
+        """Update proposal status/metadata after explicit review or coding-agent execution."""
+        return await self.self_improvement.update_improvement_proposal(proposal_id, **updates)
+
     def _hint_rank(self, hint: dict) -> tuple[int, int]:
         """Prefer stronger chain hints, then keep general hints in stable priority buckets."""
         hint_type = hint.get("type", "")

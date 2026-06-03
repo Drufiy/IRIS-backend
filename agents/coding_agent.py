@@ -116,6 +116,36 @@ class CodingAgent(BaseAgent):
             self.is_running = False
             await self._transition("INTERACTIVE")
 
+    async def run_proposal(
+        self,
+        proposal: dict[str, Any],
+        repo_path: str,
+        *,
+        memory_manager=None,
+    ) -> dict[str, Any]:
+        """Execute a single approved self-improvement proposal through the normal coding loop."""
+        proposal_id = proposal.get("id", "")
+        if memory_manager is not None and proposal_id:
+            await memory_manager.update_improvement_proposal(
+                proposal_id,
+                status="in_progress",
+            )
+
+        goal = self._goal_from_proposal(proposal)
+        result = await self.run(goal, repo_path)
+        result["proposal_id"] = proposal_id
+        result["proposal_title"] = proposal.get("title", "")
+
+        if memory_manager is not None and proposal_id:
+            next_status = "completed" if result.get("status") == "ok" else "escalated"
+            await memory_manager.update_improvement_proposal(
+                proposal_id,
+                status=next_status,
+                resolution=result.get("message", ""),
+            )
+
+        return result
+
     def _parse_step(self, response: str) -> dict[str, Any]:
         """Parse the model output into a structured coding step."""
         try:
@@ -219,3 +249,34 @@ class CodingAgent(BaseAgent):
             await self.state.transition(target_state)
         except Exception as exc:
             logger.warning(f"CodingAgent state transition failed: {exc}")
+
+    def _goal_from_proposal(self, proposal: dict[str, Any]) -> str:
+        """Translate a structured self-improvement proposal into a bounded coding goal."""
+        title = proposal.get("title", "Self-improvement proposal")
+        summary = proposal.get("summary", "")
+        domain = proposal.get("domain", "general")
+        priority = proposal.get("priority", "medium")
+        scope = proposal.get("suggested_scope", [])
+        evidence = proposal.get("evidence", {})
+        hint_values = proposal.get("suggested_hints", [])
+
+        scope_text = ", ".join(scope) if scope else "relevant local modules"
+        evidence_lines = []
+        for key in ("user_input", "action_summary", "error_message", "latency_seconds", "slowest_stage", "chain"):
+            value = evidence.get(key)
+            if value not in {None, ""}:
+                evidence_lines.append(f"- {key}: {value}")
+        hints_text = ", ".join(hint_values) if hint_values else "none"
+
+        parts = [
+            f"Proposal: {title}",
+            f"Priority: {priority}",
+            f"Domain: {domain}",
+            summary,
+            f"Suggested scope: {scope_text}",
+            f"Suggested hints to preserve or strengthen: {hints_text}",
+            "Implement a narrow fix for this proposal, keep changes scoped to the suggested modules, and run tests before finishing.",
+        ]
+        if evidence_lines:
+            parts.append("Evidence:\n" + "\n".join(evidence_lines))
+        return "\n\n".join(part for part in parts if part)

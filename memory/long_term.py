@@ -70,6 +70,17 @@ class LongTermMemory:
         store = await self._read_store()
         return list(store["improvement_proposals"])
 
+    async def update_improvement_proposal(self, proposal_id: str, **updates: Any) -> dict[str, Any] | None:
+        """Update a stored self-improvement proposal in place."""
+        store = await self._read_store()
+        for proposal in store["improvement_proposals"]:
+            if proposal.get("id") != proposal_id:
+                continue
+            proposal.update(updates)
+            await self._write_store(store)
+            return dict(proposal)
+        return None
+
     async def _read_store(self) -> dict[str, list[dict[str, Any]]]:
         """Loads the structured long-term memory store."""
         if not self.path.exists():

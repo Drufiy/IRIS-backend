@@ -94,6 +94,29 @@ class SelfImprovementManager:
             return proposals
         return proposals[-limit:]
 
+    async def update_improvement_proposal(self, proposal_id: str, **updates: Any) -> dict[str, Any] | None:
+        """Update the stored state of a proposal after review or execution."""
+        return await self.long_term.update_improvement_proposal(proposal_id, **updates)
+
+    async def select_next_proposal_for_coding(
+        self,
+        *,
+        allowed_statuses: tuple[str, ...] = ("pending",),
+        allowed_types: tuple[str, ...] = ("code_change", "performance_tuning", "workflow_promotion"),
+    ) -> dict[str, Any] | None:
+        """Pick the highest-value proposal that is safe to hand to the coding agent."""
+        proposals = await self.long_term.read_improvement_proposals()
+        candidates = [
+            proposal
+            for proposal in proposals
+            if proposal.get("status") in allowed_statuses
+            and proposal.get("proposal_type") in allowed_types
+        ]
+        if not candidates:
+            return None
+        candidates.sort(key=self._proposal_rank, reverse=True)
+        return dict(candidates[0])
+
     async def retrieve_lessons(self, query: str, limit: int | None = None) -> list[dict[str, Any]]:
         """Find the most relevant stored lessons for a new task."""
         tokens = self._tokens(query)
@@ -521,3 +544,13 @@ class SelfImprovementManager:
             seen.add(key)
             deduped.append(proposal)
         return deduped
+
+    def _proposal_rank(self, proposal: dict[str, Any]) -> tuple[int, int, str]:
+        """Prefer high-priority proposals, then broader code-impact types, then recency."""
+        priority_rank = {"high": 3, "medium": 2, "low": 1}
+        type_rank = {"code_change": 3, "performance_tuning": 2, "workflow_promotion": 1}
+        return (
+            priority_rank.get(proposal.get("priority", "low"), 0),
+            type_rank.get(proposal.get("proposal_type", ""), 0),
+            proposal.get("created_at", ""),
+        )
