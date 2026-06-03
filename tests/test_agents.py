@@ -617,6 +617,46 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(memory.proposals[0]["status"], "pending")
         self.assertEqual(memory.proposals[1]["status"], "completed")
 
+    async def test_agent_manager_prefers_higher_outcome_score_for_auto_candidates(self) -> None:
+        lower_outcome = {
+            "id": "proposal-auto-low",
+            "created_at": "2026-01-01T00:00:00+00:00",
+            "status": "pending",
+            "priority": "low",
+            "proposal_type": "workflow_promotion",
+            "title": "Promote unstable browser workflow",
+            "outcome_score": -2,
+            "outcome_confidence": 0.67,
+            "approval_policy": {"mode": "auto_eligible", "requires_human_approval": False},
+        }
+        higher_outcome = {
+            "id": "proposal-auto-high",
+            "created_at": "2026-01-01T00:00:00+00:00",
+            "status": "pending",
+            "priority": "low",
+            "proposal_type": "workflow_promotion",
+            "title": "Promote stable browser workflow",
+            "outcome_score": 4,
+            "outcome_confidence": 0.67,
+            "approval_policy": {"mode": "auto_eligible", "requires_human_approval": False},
+        }
+        memory = FakeMemory(proposals=[lower_outcome, higher_outcome])
+        coding_agent = FakeProposalCodingAgent()
+        manager = AgentManager(
+            llm=FakeLLM([]),
+            memory=memory,
+            action_router=FakeActionRouter(),
+            browser_agent=FakeBrowser(),
+            coding_agent=coding_agent,
+            tts=None,
+        )
+
+        result = await manager.run_bounded_self_improvement_loop("C:/tmp/repo", max_proposals=1)
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["processed"][0]["proposal"]["id"], "proposal-auto-high")
+        self.assertEqual(coding_agent.calls[0][0]["id"], "proposal-auto-high")
+
     async def test_agent_manager_bounded_loop_stops_after_failed_attempt(self) -> None:
         auto_proposal = {
             "id": "proposal-auto",

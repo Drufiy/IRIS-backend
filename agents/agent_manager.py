@@ -226,11 +226,13 @@ class AgentManager:
         finally:
             self._active_agents = [agent for agent in self._active_agents if agent is not self.coding_agent]
 
-    def _proposal_sort_key(self, proposal: dict) -> tuple[int, int, str]:
-        """Prefer higher-priority proposals first in bounded autonomous runs."""
+    def _proposal_sort_key(self, proposal: dict) -> tuple[int, float, int, int, str]:
+        """Prefer proposals with better measured outcomes, then priority, type, and recency."""
         priority_rank = {"high": 3, "medium": 2, "low": 1}
         type_rank = {"code_change": 3, "performance_tuning": 2, "workflow_promotion": 1}
         return (
+            int(proposal.get("outcome_score", 0)),
+            float(proposal.get("outcome_confidence", 0.0)),
             priority_rank.get(proposal.get("priority", "low"), 0),
             type_rank.get(proposal.get("proposal_type", ""), 0),
             proposal.get("created_at", ""),

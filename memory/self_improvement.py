@@ -130,7 +130,7 @@ class SelfImprovementManager:
 
     async def read_improvement_proposals(self, limit: int | None = None) -> list[dict[str, Any]]:
         """Return stored self-improvement proposals, oldest to newest by default."""
-        proposals = await self.long_term.read_improvement_proposals()
+        proposals = [self._with_outcome_metadata(proposal) for proposal in await self.long_term.read_improvement_proposals()]
         if limit is None:
             return proposals
         return proposals[-limit:]
@@ -157,7 +157,7 @@ class SelfImprovementManager:
         await self.refresh_improvement_proposals()
         proposals = await self.long_term.read_improvement_proposals()
         candidates = [
-            proposal
+            self._with_outcome_metadata(proposal)
             for proposal in proposals
             if proposal.get("status") in allowed_statuses
             and proposal.get("proposal_type") in allowed_types
@@ -168,7 +168,7 @@ class SelfImprovementManager:
         return dict(candidates[0])
 
     async def refresh_improvement_proposals(self) -> list[dict[str, Any]]:
-        """Age pending proposals upward and flag repeated escalations for human review."""
+        """Age pending proposals upward, flag repeated escalations, and refresh outcome scoring."""
         proposals = await self.long_term.read_improvement_proposals()
         now = datetime.now(timezone.utc)
         refreshed: list[dict[str, Any]] = []
@@ -213,6 +213,11 @@ class SelfImprovementManager:
                     "Similar self-improvement proposals have escalated repeatedly and now need human review."
                 )
                 updates["updated_at"] = now.isoformat()
+
+            scored_proposal = self._with_outcome_metadata(dict(proposal, **updates))
+            for field in ("outcome_score", "outcome_confidence", "last_outcome_status", "outcome_summary"):
+                if proposal.get(field) != scored_proposal.get(field):
+                    updates[field] = scored_proposal[field]
 
             if updates:
                 refreshed_proposal = await self.long_term.update_improvement_proposal(proposal["id"], **updates)
@@ -733,15 +738,75 @@ class SelfImprovementManager:
             return parsed.replace(tzinfo=timezone.utc)
         return parsed.astimezone(timezone.utc)
 
-    def _proposal_rank(self, proposal: dict[str, Any]) -> tuple[int, int, str]:
-        """Prefer high-priority proposals, then broader code-impact types, then recency."""
+    def _proposal_rank(self, proposal: dict[str, Any]) -> tuple[int, float, int, int, str]:
+        """Prefer proposals with better measured outcomes, then priority, type, and recency."""
         priority_rank = {"high": 3, "medium": 2, "low": 1}
         type_rank = {"code_change": 3, "performance_tuning": 2, "workflow_promotion": 1}
         return (
+            int(proposal.get("outcome_score", 0)),
+            float(proposal.get("outcome_confidence", 0.0)),
             priority_rank.get(proposal.get("priority", "low"), 0),
             type_rank.get(proposal.get("proposal_type", ""), 0),
             proposal.get("created_at", ""),
         )
+
+    def _with_outcome_metadata(self, proposal: dict[str, Any]) -> dict[str, Any]:
+        """Attach derived outcome scoring fields without mutating caller-owned proposal state."""
+        enriched = dict(proposal)
+        enriched.update(self._outcome_fields(enriched))
+        return enriched
+
+    def _outcome_fields(self, proposal: dict[str, Any]) -> dict[str, Any]:
+        """Score a proposal based on how well prior execution attempts actually paid off."""
+        history = proposal.get("execution_history", [])
+        successful_runs = 0
+        failed_runs = 0
+        regression_events = 0
+        last_outcome_status = proposal.get("status", "pending")
+
+        for event in history:
+            event_name = str(event.get("event", "")).lower()
+            event_status = str(event.get("status", "")).lower()
+            if event_name == "finished":
+                if event_status in {"completed", "ok", "success"}:
+                    successful_runs += 1
+                elif event_status:
+                    failed_runs += 1
+                last_outcome_status = event_status or last_outcome_status
+            elif event_name == "regression_detected":
+                regression_events += 1
+                last_outcome_status = "regressed"
+
+        regression_count = max(int(proposal.get("regression_count", 0)), regression_events)
+        stale_count = int(proposal.get("stale_count", 0))
+        status = str(proposal.get("status", "pending")).lower()
+
+        score = (successful_runs * 4) - (failed_runs * 3) - (regression_count * 5) - stale_count
+        if status == "completed":
+            score += 2
+        elif status == "escalated":
+            score -= 2
+        elif status == "needs_human_review":
+            score -= 3
+        elif status == "regressed":
+            score -= 4
+
+        evidence_points = successful_runs + failed_runs + regression_count
+        confidence = min(1.0, evidence_points / 3) if evidence_points else 0.0
+        attempt_count = max(int(proposal.get("attempt_count", 0)), successful_runs + failed_runs)
+
+        return {
+            "outcome_score": score,
+            "outcome_confidence": round(confidence, 2),
+            "last_outcome_status": last_outcome_status,
+            "outcome_summary": {
+                "successful_runs": successful_runs,
+                "failed_runs": failed_runs,
+                "regressions": regression_count,
+                "stale_count": stale_count,
+                "attempt_count": attempt_count,
+            },
+        }
 
     def _approval_policy_for(
         self,

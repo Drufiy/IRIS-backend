@@ -689,3 +689,148 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("completed-1", new_failure_proposal["related_regressed_proposal_ids"])
             self.assertTrue(new_failure_proposal["approval_policy"]["requires_human_approval"])
             self.assertIn("regressed", new_failure_proposal["approval_policy"]["reason"].lower())
+
+    async def test_memory_manager_scores_proposal_outcomes_from_execution_history(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+            now = datetime.now(timezone.utc).isoformat()
+            await manager.long.save_improvement_proposal(
+                {
+                    "id": "workflow-1",
+                    "created_at": now,
+                    "status": "completed",
+                    "proposal_type": "workflow_promotion",
+                    "domain": "browser",
+                    "trigger": "repeated_success_chain",
+                    "priority": "low",
+                    "title": "Promote weather workflow",
+                    "execution_history": [
+                        {"event": "started", "status": "in_progress"},
+                        {"event": "finished", "status": "completed", "message": "Applied fix."},
+                    ],
+                    "attempt_count": 2,
+                }
+            )
+
+            await manager.refresh_improvement_proposals()
+            proposals = await manager.read_improvement_proposals()
+            scored = proposals[0]
+            self.assertGreater(scored["outcome_score"], 0)
+            self.assertGreater(scored["outcome_confidence"], 0.0)
+            self.assertEqual(scored["last_outcome_status"], "completed")
+            self.assertEqual(scored["outcome_summary"]["successful_runs"], 1)
+            self.assertEqual(scored["outcome_summary"]["failed_runs"], 0)
+
+    async def test_memory_manager_penalizes_regressed_proposal_outcomes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+            now = datetime.now(timezone.utc).isoformat()
+            await manager.long.save_improvement_proposal(
+                {
+                    "id": "completed-good",
+                    "created_at": now,
+                    "status": "completed",
+                    "proposal_type": "workflow_promotion",
+                    "domain": "browser",
+                    "trigger": "repeated_success_chain",
+                    "priority": "low",
+                    "title": "Promote browser workflow",
+                    "execution_history": [
+                        {"event": "finished", "status": "completed"},
+                    ],
+                    "attempt_count": 1,
+                }
+            )
+            await manager.long.save_improvement_proposal(
+                {
+                    "id": "regressed-1",
+                    "created_at": now,
+                    "status": "regressed",
+                    "proposal_type": "workflow_promotion",
+                    "domain": "browser",
+                    "trigger": "repeated_success_chain",
+                    "priority": "low",
+                    "title": "Promote browser workflow",
+                    "execution_history": [
+                        {"event": "finished", "status": "completed"},
+                        {"event": "regression_detected", "status": "regressed"},
+                    ],
+                    "regression_count": 1,
+                    "attempt_count": 1,
+                }
+            )
+
+            await manager.refresh_improvement_proposals()
+            proposals = {proposal["id"]: proposal for proposal in await manager.read_improvement_proposals()}
+            self.assertLess(proposals["regressed-1"]["outcome_score"], proposals["completed-good"]["outcome_score"])
+            self.assertEqual(proposals["regressed-1"]["last_outcome_status"], "regressed")
+
+    async def test_memory_manager_prefers_pending_proposal_with_better_outcome_score(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+            now = datetime.now(timezone.utc).isoformat()
+            await manager.long.save_improvement_proposal(
+                {
+                    "id": "workflow-good",
+                    "created_at": now,
+                    "status": "pending",
+                    "proposal_type": "workflow_promotion",
+                    "domain": "browser",
+                    "trigger": "repeated_success_chain",
+                    "priority": "low",
+                    "title": "Promote stable browser workflow",
+                    "execution_history": [
+                        {"event": "finished", "status": "completed"},
+                    ],
+                    "attempt_count": 1,
+                }
+            )
+            await manager.long.save_improvement_proposal(
+                {
+                    "id": "workflow-bad",
+                    "created_at": now,
+                    "status": "pending",
+                    "proposal_type": "workflow_promotion",
+                    "domain": "browser",
+                    "trigger": "repeated_success_chain",
+                    "priority": "low",
+                    "title": "Promote unstable browser workflow",
+                    "execution_history": [
+                        {"event": "finished", "status": "escalated"},
+                    ],
+                    "attempt_count": 1,
+                }
+            )
+
+            next_proposal = await manager.self_improvement.select_next_proposal_for_coding(
+                allowed_types=("workflow_promotion",),
+            )
+            self.assertIsNotNone(next_proposal)
+            self.assertEqual(next_proposal["id"], "workflow-good")
