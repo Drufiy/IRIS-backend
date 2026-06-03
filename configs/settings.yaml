@@ -1,12 +1,12 @@
 llm:
-  default_model: "deepseek-flash"    # Default for general tasks
+  default_model: "deepseek-v4-flash"    # Default for general tasks
   task_routing:
-    plan:   "deepseek-flash"
-    chat:   "deepseek-flash"
-    code:   "deepseek-pro"
-    reason: "deepseek-pro"
-    local:  "deepseek-flash"
-    memory: "deepseek-flash"
+    plan:   "deepseek-v4-flash"
+    chat:   "deepseek-v4-flash"
+    code:   "deepseek-v4-pro"
+    reason: "deepseek-v4-pro"
+    local:  "deepseek-v4-flash"
+    memory: "deepseek-v4-flash"
 
 memory:
   chroma_path: "~/.iris/memory/chroma"
@@ -25,8 +25,8 @@ asr:
   model: "whisper-large-v3-turbo"
   groq_api_key: ""                  # Injected from $GROQ_API_KEY env var or keys.env
 voice:
-  elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"   # Rachel (default ElevenLabs voice)
-  elevenlabs_model: "eleven_turbo_v2"
+  elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"   # Rachel (female, conversational)
+  elevenlabs_model: "eleven_flash_v2_5"
   stream: true
 
 ui:

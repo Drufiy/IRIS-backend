@@ -15,7 +15,7 @@ class ElevenLabsTTS:
 
     BASE_URL = "https://api.elevenlabs.io/v1"
 
-    def __init__(self, api_key: str, voice_id: str, model: str = "eleven_turbo_v2") -> None:
+    def __init__(self, api_key: str, voice_id: str, model: str = "eleven_flash_v2_5") -> None:
         self.api_key = api_key
         self.voice_id = voice_id
         self.model = model

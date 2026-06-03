@@ -13,15 +13,17 @@ except ImportError:  # pragma: no cover - exercised only in dependency-light env
 from llm.providers.base import BaseLLMProvider
 
 DEEPSEEK_MODELS = {
-    "deepseek-chat": "deepseek-chat",
-    "deepseek-reasoner": "deepseek-reasoner",
+    "deepseek-chat": "deepseek-v4-flash",
+    "deepseek-reasoner": "deepseek-v4-pro",
+    "deepseek-v4-flash": "deepseek-v4-flash",
+    "deepseek-v4-pro": "deepseek-v4-pro",
 }
 
 
 class DeepSeekProvider(BaseLLMProvider):
     """Async client wrapper for DeepSeek chat completions."""
 
-    BASE_URL = "https://api.deepseek.com/v1"
+    BASE_URL = "https://api.deepseek.com"
 
     def __init__(self, model: str, config: dict, client=None):
         self.model = DEEPSEEK_MODELS.get(model, model)

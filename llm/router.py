@@ -9,12 +9,12 @@ from llm.providers.base import BaseLLMProvider
 from llm.providers.deepseek_provider import DeepSeekProvider
 
 TASK_MODEL_MAP = {
-    "plan": "deepseek-flash",
-    "chat": "deepseek-flash",
-    "code": "deepseek-pro",
-    "reason": "deepseek-pro",
-    "local": "deepseek-flash",
-    "memory": "deepseek-flash",
+    "plan": "deepseek-v4-flash",
+    "chat": "deepseek-v4-flash",
+    "code": "deepseek-v4-pro",
+    "reason": "deepseek-v4-pro",
+    "local": "deepseek-v4-flash",
+    "memory": "deepseek-v4-flash",
 }
 
 
@@ -36,8 +36,8 @@ class LLMRouter:
         }
         if providers is None:
             self.providers = {
-                "deepseek-flash": DeepSeekProvider("deepseek-chat", config),
-                "deepseek-pro": DeepSeekProvider("deepseek-reasoner", config),
+                "deepseek-v4-flash": DeepSeekProvider("deepseek-v4-flash", config),
+                "deepseek-v4-pro": DeepSeekProvider("deepseek-v4-pro", config),
             }
         else:
             self.providers = providers
