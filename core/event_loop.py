@@ -1,6 +1,7 @@
 """Main async event brain for IRIS."""
 
 import asyncio
+from time import perf_counter
 
 from loguru import logger
 
@@ -150,23 +151,76 @@ class IRISEventLoop:
             goal = await self._task_queue.get()
             logger.info(f"Processing goal: '{goal}'")
             await self.state.transition(IRISState.ACTING)
+            started_at = perf_counter()
+            response = ""
+            status = "success"
+            error_message = ""
+            action_summary = "agent_run:success"
+            bias_summary = ""
+            timing_breakdown: dict[str, float] = {}
 
             try:
                 messages = await self.memory.inject_into_prompt(
                     [{"role": "user", "content": goal}]
                 )
                 self._current_task = asyncio.current_task()
-                response = await self.agents.run(goal, messages)
+                agent_result = await self.agents.run(goal, messages)
+                if isinstance(agent_result, dict):
+                    response = agent_result.get("response", "")
+                    action_summary = agent_result.get("action_summary", action_summary)
+                    metadata = agent_result.get("metadata", {})
+                    planner_meta = metadata.get("planner", {})
+                    timing_breakdown.update(metadata.get("performance", {}))
+                    if planner_meta.get("bias_applied"):
+                        bias_summary = (
+                            f" planner_bias:{planner_meta.get('preferred_chain', '')}"
+                            f" strength={planner_meta.get('strength', '')}"
+                            f" domain={planner_meta.get('domain', '')}"
+                        )
+                else:
+                    response = str(agent_result)
                 await self.memory.store("user", goal)
                 await self.memory.store("iris", response)
+                tts_started_at = perf_counter()
                 await self.tts.speak(response)
+                timing_breakdown["tts_seconds"] = perf_counter() - tts_started_at
             except asyncio.CancelledError:
+                status = "cancelled"
+                error_message = "Task cancelled mid-execution"
+                action_summary = "agent_run:cancelled"
                 logger.info("Task cancelled mid-execution")
             except Exception as exc:
+                status = "error"
+                error_message = str(exc)
+                action_summary = "agent_run:error"
                 logger.error(f"Task worker error: {exc}")
+                tts_started_at = perf_counter()
                 await self.tts.speak("Sorry, something went wrong.")
+                timing_breakdown["tts_seconds"] = perf_counter() - tts_started_at
             finally:
                 self._current_task = None
+                total_seconds = perf_counter() - started_at
+                timing_breakdown["total_seconds"] = total_seconds
+                if timing_breakdown:
+                    logger.info(
+                        "Task timings: "
+                        + ", ".join(
+                            f"{key}={value:.3f}s" for key, value in sorted(timing_breakdown.items())
+                        )
+                    )
+                if hasattr(self.memory, "record_interaction"):
+                    try:
+                        await self.memory.record_interaction(
+                            user_input=goal,
+                            response=response,
+                            status=status,
+                            latency_seconds=total_seconds,
+                            action_summary=f"{action_summary}{bias_summary}",
+                            error_message=error_message,
+                            timing_breakdown=timing_breakdown,
+                        )
+                    except Exception as exc:  # pragma: no cover - logging only
+                        logger.warning(f"Failed to record interaction: {exc}")
                 await self.state.transition(IRISState.IDLE)
 
     async def _stop(self) -> None:

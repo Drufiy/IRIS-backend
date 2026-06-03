@@ -37,19 +37,43 @@ class LongTermMemory:
         store = await self._read_store()
         return list(store["habits"])
 
+    async def save_interaction(self, interaction: dict[str, Any]) -> None:
+        """Stores a durable interaction record for later reflection."""
+        store = await self._read_store()
+        store["interactions"].append(interaction)
+        await self._write_store(store)
+
+    async def read_interactions(self) -> list[dict[str, Any]]:
+        """Reads all stored interaction records."""
+        store = await self._read_store()
+        return list(store["interactions"])
+
+    async def save_reflection(self, reflection: dict[str, Any]) -> None:
+        """Stores a durable reflection derived from an interaction."""
+        store = await self._read_store()
+        store["reflections"].append(reflection)
+        await self._write_store(store)
+
+    async def read_reflections(self) -> list[dict[str, Any]]:
+        """Reads all stored reflections."""
+        store = await self._read_store()
+        return list(store["reflections"])
+
     async def _read_store(self) -> dict[str, list[dict[str, Any]]]:
         """Loads the structured long-term memory store."""
         if not self.path.exists():
-            return {"entries": [], "habits": []}
+            return {"entries": [], "habits": [], "interactions": [], "reflections": []}
         raw = await asyncio.to_thread(self.path.read_text, "utf-8")
         if not raw.strip():
-            return {"entries": [], "habits": []}
+            return {"entries": [], "habits": [], "interactions": [], "reflections": []}
         parsed = json.loads(raw)
         if isinstance(parsed, list):
-            return {"entries": parsed, "habits": []}
+            return {"entries": parsed, "habits": [], "interactions": [], "reflections": []}
         return {
             "entries": list(parsed.get("entries", [])),
             "habits": list(parsed.get("habits", [])),
+            "interactions": list(parsed.get("interactions", [])),
+            "reflections": list(parsed.get("reflections", [])),
         }
 
     async def _write_store(self, store: dict[str, list[dict[str, Any]]]) -> None:

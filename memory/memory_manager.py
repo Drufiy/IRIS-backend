@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from memory.graph import KnowledgeGraph
 from memory.long_term import LongTermMemory
+from memory.self_improvement import SelfImprovementManager
 from memory.short_term import ShortTermMemory
 from memory.vector_store import VectorStore
 
@@ -25,6 +26,10 @@ class MemoryManager:
         self.graph = KnowledgeGraph()
         self.top_k_retrieval = config.get("top_k_retrieval", 5)
         self.habit_limit = config.get("habit_retrieval_limit", 3)
+        self.self_improvement = SelfImprovementManager(
+            self.long,
+            retrieval_limit=config.get("interaction_retrieval_limit", 10),
+        )
 
     async def store(self, role: str, content: str, tags: list[str] | None = None) -> None:
         """Stores a turn in all memory layers."""
@@ -64,9 +69,11 @@ class MemoryManager:
             return []
         query = base_messages[-1].get("content", "")
         context = await self.retrieve_context(query)
-        if not context:
+        lessons = await self.self_improvement.retrieve_lessons(query)
+        if not context and not lessons:
             return list(base_messages)
 
+        messages_to_prepend = []
         lines = []
         for item in context:
             text = item.get("text")
@@ -75,14 +82,50 @@ class MemoryManager:
             metadata = item.get("metadata", {})
             prefix = metadata.get("type") or metadata.get("role", "memory")
             lines.append(f"- [{prefix}] {text}")
-        if not lines:
-            return list(base_messages)
+        if lines:
+            messages_to_prepend.append(
+                {
+                    "role": "system",
+                    "content": "Relevant memory context:\n" + "\n".join(lines),
+                }
+            )
 
-        memory_message = {
-            "role": "system",
-            "content": "Relevant memory context:\n" + "\n".join(lines),
-        }
-        return [memory_message, *base_messages]
+        lesson_lines = []
+        hint_lines = []
+        for item in lessons:
+            classification = item.get("classification", "lesson")
+            lesson = item.get("lesson", "")
+            if lesson:
+                lesson_lines.append(f"- [{classification}] {lesson}")
+            for hint in item.get("hints", []):
+                hint_type = hint.get("type", "hint")
+                hint_value = hint.get("value", "")
+                hint_reason = hint.get("reason", "")
+                if hint_value:
+                    if hint_type == "chain" and hint.get("chain"):
+                        strength = hint.get("strength", "1")
+                        domain = hint.get("domain", "general")
+                        hint_lines.append(
+                            f"- [{hint_type}] {hint_value}: {hint_reason} Preferred order: {hint['chain']} Strength: {strength} Domain: {domain}"
+                        )
+                    else:
+                        hint_lines.append(f"- [{hint_type}] {hint_value}: {hint_reason}")
+        if lesson_lines:
+            messages_to_prepend.append(
+                {
+                    "role": "system",
+                    "content": "Relevant lessons from past interactions:\n" + "\n".join(lesson_lines),
+                }
+            )
+        if hint_lines:
+            messages_to_prepend.append(
+                {
+                    "role": "system",
+                    "content": "Reusable planning hints:\n" + "\n".join(hint_lines),
+                }
+            )
+
+        return [*messages_to_prepend, *base_messages]
 
     async def learn_habit(self, trigger: str, action: str) -> None:
         """Store a behavioral pattern for future prediction."""
@@ -99,6 +142,62 @@ class MemoryManager:
             doc_id=habit["id"],
         )
         await self.graph.add_relation(trigger.lower(), action.lower(), relationship="habit")
+
+    async def record_interaction(
+        self,
+        *,
+        user_input: str,
+        response: str = "",
+        status: str,
+        latency_seconds: float,
+        action_summary: str = "",
+        error_message: str = "",
+        satisfaction: str = "unknown",
+        timing_breakdown: dict[str, float] | None = None,
+    ) -> dict:
+        """Persist a completed interaction for later reflection."""
+        return await self.self_improvement.record_interaction(
+            user_input=user_input,
+            response=response,
+            status=status,
+            latency_seconds=latency_seconds,
+            action_summary=action_summary,
+            error_message=error_message,
+            satisfaction=satisfaction,
+            timing_breakdown=timing_breakdown,
+        )
+
+    async def read_interactions(self, limit: int | None = None) -> list[dict]:
+        """Expose recent interaction history to future reflection passes."""
+        return await self.self_improvement.read_interactions(limit=limit)
+
+    async def read_reflections(self, limit: int | None = None) -> list[dict]:
+        """Expose reflections derived from prior interactions."""
+        return await self.self_improvement.read_reflections(limit=limit)
+
+    async def get_planning_hints(self, query: str, limit: int | None = None) -> list[dict]:
+        """Return flattened structured hints relevant to a new task."""
+        lessons = await self.self_improvement.retrieve_lessons(query, limit=limit)
+        hints: list[dict] = []
+        seen: set[tuple[str, str]] = set()
+        for lesson in lessons:
+            for hint in lesson.get("hints", []):
+                key = (hint.get("type", ""), hint.get("value", ""))
+                if key in seen:
+                    continue
+                seen.add(key)
+                hints.append(dict(hint))
+        hints.sort(key=self._hint_rank, reverse=True)
+        return hints
+
+    def _hint_rank(self, hint: dict) -> tuple[int, int]:
+        """Prefer stronger chain hints, then keep general hints in stable priority buckets."""
+        hint_type = hint.get("type", "")
+        if hint_type == "chain":
+            return (3, int(hint.get("strength", "1")))
+        if hint_type in {"reliability", "risk"}:
+            return (2, 0)
+        return (1, 0)
 
     async def _matching_habits(self, query: str) -> list[dict]:
         """Finds habits that match the current query."""

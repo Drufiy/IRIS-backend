@@ -58,3 +58,74 @@ class LLMRouterTests(unittest.IsolatedAsyncioTestCase):
         async for chunk in router.stream([{"role": "user", "content": "hi"}], task_type="chat"):
             chunks.append(chunk)
         self.assertEqual("".join(chunks), "stream reply")
+
+    async def test_router_tracks_usage_for_complete_calls(self) -> None:
+        router = LLMRouter(
+            {
+                "default_model": "deepseek-flash",
+                "task_routing": {"chat": "deepseek-flash"},
+            },
+            providers={
+                "deepseek-flash": StaticProvider("hello there"),
+                "deepseek-pro": FailingProvider(),
+            },
+        )
+        await router.complete([{"role": "user", "content": "hello"}], task_type="chat")
+        summary = router.usage_summary()
+        self.assertEqual(summary["requests"], 1)
+        self.assertGreater(summary["prompt_tokens"], 0)
+        self.assertGreater(summary["completion_tokens"], 0)
+        self.assertEqual(summary["total_tokens"], summary["prompt_tokens"] + summary["completion_tokens"])
+
+    async def test_router_tracks_usage_for_stream_calls(self) -> None:
+        router = LLMRouter(
+            {
+                "default_model": "deepseek-flash",
+                "task_routing": {"chat": "deepseek-flash"},
+            },
+            providers={
+                "deepseek-flash": StaticProvider("stream reply"),
+                "deepseek-pro": FailingProvider(),
+            },
+        )
+        chunks = []
+        async for chunk in router.stream([{"role": "user", "content": "hello"}], task_type="chat"):
+            chunks.append(chunk)
+        self.assertEqual("".join(chunks), "stream reply")
+        summary = router.usage_summary()
+        self.assertEqual(summary["requests"], 1)
+        self.assertGreater(summary["completion_tokens"], 0)
+
+    async def test_router_enforces_configured_token_budget(self) -> None:
+        router = LLMRouter(
+            {
+                "default_model": "deepseek-flash",
+                "task_routing": {"chat": "deepseek-flash"},
+                "session_token_budget": 3,
+                "enforce_token_budget": True,
+            },
+            providers={
+                "deepseek-flash": StaticProvider("reply"),
+                "deepseek-pro": FailingProvider(),
+            },
+        )
+        with self.assertRaisesRegex(RuntimeError, "token budget exceeded"):
+            await router.complete([{"role": "user", "content": "this prompt is definitely longer than three tokens"}], task_type="chat")
+
+    async def test_router_exposes_budget_remaining(self) -> None:
+        router = LLMRouter(
+            {
+                "default_model": "deepseek-flash",
+                "task_routing": {"chat": "deepseek-flash"},
+                "session_token_budget": 100,
+            },
+            providers={
+                "deepseek-flash": StaticProvider("short reply"),
+                "deepseek-pro": FailingProvider(),
+            },
+        )
+        await router.complete([{"role": "user", "content": "hello"}], task_type="chat")
+        summary = router.usage_summary()
+        self.assertTrue(summary["budget_configured"])
+        self.assertEqual(summary["budget_limit"], 100)
+        self.assertLess(summary["budget_remaining"], 100)
