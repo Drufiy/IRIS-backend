@@ -69,6 +69,8 @@ class SelfImprovementManager:
         await self.long_term.save_interaction(record)
         reflection = self._build_reflection(record, prior_interactions=prior_interactions)
         await self.long_term.save_reflection(reflection)
+        for proposal in self._build_improvement_proposals(record, reflection, prior_interactions=prior_interactions):
+            await self.long_term.save_improvement_proposal(proposal)
         return record
 
     async def read_interactions(self, limit: int | None = None) -> list[dict[str, Any]]:
@@ -84,6 +86,13 @@ class SelfImprovementManager:
         if limit is None:
             return reflections
         return reflections[-limit:]
+
+    async def read_improvement_proposals(self, limit: int | None = None) -> list[dict[str, Any]]:
+        """Return stored self-improvement proposals, oldest to newest by default."""
+        proposals = await self.long_term.read_improvement_proposals()
+        if limit is None:
+            return proposals
+        return proposals[-limit:]
 
     async def retrieve_lessons(self, query: str, limit: int | None = None) -> list[dict[str, Any]]:
         """Find the most relevant stored lessons for a new task."""
@@ -141,6 +150,110 @@ class SelfImprovementManager:
             "hints": hints,
             "source_status": status,
         }
+
+    def _build_improvement_proposals(
+        self,
+        record: dict[str, Any],
+        reflection: dict[str, Any],
+        *,
+        prior_interactions: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Create reviewable improvement proposals from repeated failures or latency patterns."""
+        proposals: list[dict[str, Any]] = []
+        user_input = record.get("user_input", "")
+        action_summary = record.get("action_summary", "")
+        timing_breakdown = record.get("timing_breakdown", {})
+        domain = reflection.get("domain", "general")
+        repeated_failures = self._count_repeated_failures(record, prior_interactions)
+        repeated_successes = self._count_repeated_successes(record, prior_interactions)
+
+        if repeated_failures >= 2:
+            proposal_type = "code_change" if domain in {"browser", "coding", "files", "auth"} else "behavior_tuning"
+            proposals.append(
+                {
+                    "id": str(uuid4()),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "status": "pending",
+                    "proposal_type": proposal_type,
+                    "domain": domain,
+                    "source_interaction_id": record["id"],
+                    "trigger": "repeated_failures",
+                    "priority": "high",
+                    "title": f"Investigate repeated {domain} failures",
+                    "summary": (
+                        "Similar tasks have failed repeatedly. Review the failing flow and add a targeted fix "
+                        "instead of retrying the same approach."
+                    ),
+                    "evidence": {
+                        "user_input": user_input,
+                        "action_summary": action_summary,
+                        "error_message": record.get("error_message", ""),
+                        "repeated_failures": repeated_failures,
+                    },
+                    "suggested_scope": self._suggest_scope(domain, action_summary),
+                    "suggested_hints": [hint["value"] for hint in reflection.get("hints", [])],
+                }
+            )
+
+        if float(record.get("latency_seconds", 0.0)) >= 5:
+            slowest_stage = self._slowest_stage(timing_breakdown)
+            proposals.append(
+                {
+                    "id": str(uuid4()),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "status": "pending",
+                    "proposal_type": "performance_tuning",
+                    "domain": domain,
+                    "source_interaction_id": record["id"],
+                    "trigger": "slow_task",
+                    "priority": "medium",
+                    "title": f"Reduce latency in {domain} flow",
+                    "summary": (
+                        "This task was noticeably slow. Review the slowest stage and trim context, actions, "
+                        "or response length before attempting deeper architectural changes."
+                    ),
+                    "evidence": {
+                        "user_input": user_input,
+                        "action_summary": action_summary,
+                        "latency_seconds": record.get("latency_seconds", 0.0),
+                        "slowest_stage": slowest_stage,
+                        "timing_breakdown": timing_breakdown,
+                    },
+                    "suggested_scope": self._suggest_scope(domain, action_summary),
+                    "suggested_hints": [hint["value"] for hint in reflection.get("hints", []) if hint.get("type") == "performance"],
+                }
+            )
+
+        if repeated_successes >= 2:
+            chain_steps = self._extract_chain_steps(action_summary)
+            if len(chain_steps) >= 2:
+                proposals.append(
+                    {
+                        "id": str(uuid4()),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "status": "pending",
+                        "proposal_type": "workflow_promotion",
+                        "domain": domain,
+                        "source_interaction_id": record["id"],
+                        "trigger": "repeated_success_chain",
+                        "priority": "low",
+                        "title": f"Promote stable {domain} workflow",
+                        "summary": (
+                            "A similar multi-step workflow has succeeded repeatedly. Consider promoting it into "
+                            "a stronger built-in heuristic or planner rule."
+                        ),
+                        "evidence": {
+                            "user_input": user_input,
+                            "action_summary": action_summary,
+                            "repeated_successes": repeated_successes + 1,
+                            "chain": " -> ".join(chain_steps),
+                        },
+                        "suggested_scope": self._suggest_scope(domain, action_summary),
+                        "suggested_hints": [hint["value"] for hint in reflection.get("hints", []) if hint.get("type") in {"chain", "pattern"}],
+                    }
+                )
+
+        return self._dedupe_proposals(proposals, prior_interactions=prior_interactions)
 
     def _tokens(self, text: str) -> set[str]:
         return {
@@ -369,3 +482,42 @@ class SelfImprovementManager:
         if not filtered:
             return ""
         return max(filtered, key=filtered.get)
+
+    def _suggest_scope(self, domain: str, action_summary: str) -> list[str]:
+        """Map a domain or action trace to the most likely modules to inspect."""
+        scope_map = {
+            "browser": ["browser/", "agents/executor.py", "agents/planner.py"],
+            "coding": ["agents/coding_agent.py", "agents/agent_manager.py"],
+            "files": ["actions/file_actions.py", "actions/safety.py"],
+            "auth": ["browser/", "browser/login_handler.py", "agents/executor.py"],
+            "email": ["actions/email_actions.py", "agents/executor.py"],
+            "todo": ["actions/todo_actions.py", "agents/planner.py"],
+            "weather": ["actions/weather_actions.py", "agents/planner.py"],
+            "general": ["agents/planner.py", "agents/executor.py", "memory/self_improvement.py"],
+        }
+        scope = list(scope_map.get(domain, scope_map["general"]))
+        if "voice" in action_summary.lower() and "voice/" not in scope:
+            scope.append("voice/")
+        return scope
+
+    def _dedupe_proposals(
+        self,
+        proposals: list[dict[str, Any]],
+        *,
+        prior_interactions: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Suppress identical proposals when a similar one already exists very recently."""
+        del prior_interactions  # reserved for future ranking against recency windows
+        deduped: list[dict[str, Any]] = []
+        seen: set[tuple[str, str, str]] = set()
+        for proposal in proposals:
+            key = (
+                proposal.get("proposal_type", ""),
+                proposal.get("domain", ""),
+                proposal.get("trigger", ""),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(proposal)
+        return deduped

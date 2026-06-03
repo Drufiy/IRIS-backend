@@ -320,6 +320,13 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             hint_values = {hint["value"] for hint in latest["hints"]}
             self.assertIn("escalate_after_repeated_failures", hint_values)
             self.assertIn("clarify_before_risky_action", hint_values)
+            proposals = await manager.read_improvement_proposals()
+            self.assertTrue(any(proposal["trigger"] == "repeated_failures" for proposal in proposals))
+            repeated_failure_proposal = next(
+                proposal for proposal in proposals if proposal["trigger"] == "repeated_failures"
+            )
+            self.assertEqual(repeated_failure_proposal["proposal_type"], "code_change")
+            self.assertEqual(repeated_failure_proposal["priority"], "high")
 
     async def test_memory_manager_generates_stage_specific_performance_hints(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -355,3 +362,54 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("prefer_fewer_actions", hint_values)
             self.assertIn("keep_response_brief", hint_values)
             self.assertIn("execution seconds", latest["lesson"].lower())
+            proposals = await manager.read_improvement_proposals(status="pending")
+            performance_proposal = next(
+                proposal for proposal in proposals if proposal["trigger"] == "slow_task"
+            )
+            self.assertEqual(performance_proposal["proposal_type"], "performance_tuning")
+            self.assertEqual(performance_proposal["evidence"]["slowest_stage"], "execution_seconds")
+            self.assertIn("voice/", performance_proposal["suggested_scope"])
+
+    async def test_memory_manager_queues_workflow_promotion_proposal_for_repeated_success(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+
+            await manager.record_interaction(
+                user_input="check weather in browser",
+                response="Done.",
+                status="success",
+                latency_seconds=1.0,
+                action_summary="browser:ok -> get_weather:ok",
+            )
+            await manager.record_interaction(
+                user_input="check weather in browser again",
+                response="Done.",
+                status="success",
+                latency_seconds=0.9,
+                action_summary="browser:ok -> get_weather:ok",
+            )
+            await manager.record_interaction(
+                user_input="check weather in browser tomorrow",
+                response="Done.",
+                status="success",
+                latency_seconds=0.8,
+                action_summary="browser:ok -> get_weather:ok",
+            )
+
+            proposals = await manager.read_improvement_proposals(status="pending")
+            workflow_proposal = next(
+                proposal for proposal in proposals if proposal["trigger"] == "repeated_success_chain"
+            )
+            self.assertEqual(workflow_proposal["proposal_type"], "workflow_promotion")
+            self.assertEqual(workflow_proposal["domain"], "browser")
+            self.assertEqual(workflow_proposal["evidence"]["chain"], "browser -> get_weather")
+            self.assertEqual(workflow_proposal["priority"], "low")

@@ -190,6 +190,13 @@ class MemoryManager:
         hints.sort(key=self._hint_rank, reverse=True)
         return hints
 
+    async def read_improvement_proposals(self, limit: int | None = None, status: str | None = None) -> list[dict]:
+        """Expose queued self-improvement proposals for review or later coding-agent work."""
+        proposals = await self.self_improvement.read_improvement_proposals(limit=limit)
+        if status is None:
+            return proposals
+        return [proposal for proposal in proposals if proposal.get("status") == status]
+
     def _hint_rank(self, hint: dict) -> tuple[int, int]:
         """Prefer stronger chain hints, then keep general hints in stable priority buckets."""
         hint_type = hint.get("type", "")
