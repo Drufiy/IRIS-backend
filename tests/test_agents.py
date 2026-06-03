@@ -43,8 +43,9 @@ class FakeStateManager:
 
 
 class FakeMemory:
-    def __init__(self, hints: list[dict] | None = None) -> None:
+    def __init__(self, hints: list[dict] | None = None, proposals: list[dict] | None = None) -> None:
         self.hints = hints or []
+        self.proposals = proposals or []
         self.updates: list[tuple[str, dict]] = []
 
     async def get_planning_hints(self, query: str) -> list[dict]:
@@ -52,7 +53,26 @@ class FakeMemory:
 
     async def update_improvement_proposal(self, proposal_id: str, **updates) -> dict:
         self.updates.append((proposal_id, dict(updates)))
+        for proposal in self.proposals:
+            if proposal.get("id") == proposal_id:
+                proposal.update(updates)
         return {"id": proposal_id, **updates}
+
+    async def read_improvement_proposals(self, limit: int | None = None, status: str | None = None) -> list[dict]:
+        proposals = list(self.proposals)
+        if status is not None:
+            proposals = [proposal for proposal in proposals if proposal.get("status") == status]
+        if limit is not None:
+            proposals = proposals[-limit:]
+        return proposals
+
+    async def select_next_proposal_for_coding(self) -> dict | None:
+        candidates = [proposal for proposal in self.proposals if proposal.get("status") == "pending"]
+        if not candidates:
+            return None
+        priority_rank = {"high": 3, "medium": 2, "low": 1}
+        candidates.sort(key=lambda proposal: (priority_rank.get(proposal.get("priority", "low"), 0), proposal.get("created_at", "")), reverse=True)
+        return dict(candidates[0])
 
 
 class FakeActionRouter:
@@ -77,6 +97,22 @@ class FakeBrowser:
 
     async def close(self) -> None:
         self.calls.append(("close", None))
+
+
+class FakeProposalCodingAgent:
+    def __init__(self, result: dict | None = None) -> None:
+        self.calls: list[tuple[dict, str, object]] = []
+        self.result = result or {"status": "ok", "message": "Applied proposal changes."}
+
+    async def run_proposal(self, proposal: dict, repo_path: str, *, memory_manager=None) -> dict:
+        self.calls.append((dict(proposal), repo_path, memory_manager))
+        if memory_manager is not None and proposal.get("id"):
+            await memory_manager.update_improvement_proposal(proposal["id"], status="in_progress")
+            await memory_manager.update_improvement_proposal(proposal["id"], status="completed", resolution=self.result["message"])
+        return dict(self.result, proposal_id=proposal.get("id"))
+
+    async def cancel(self) -> None:
+        return None
 
 
 class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
@@ -439,6 +475,57 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("execution_seconds", performance_meta)
         self.assertIn("agent_total_seconds", performance_meta)
         self.assertGreaterEqual(performance_meta["agent_total_seconds"], performance_meta["planning_seconds"])
+
+    async def test_agent_manager_reviews_pending_self_improvement_proposals(self) -> None:
+        proposal = {
+            "id": "proposal-1",
+            "status": "pending",
+            "priority": "high",
+            "proposal_type": "code_change",
+            "title": "Investigate repeated browser failures",
+        }
+        manager = AgentManager(
+            llm=FakeLLM([]),
+            memory=FakeMemory(proposals=[proposal]),
+            action_router=FakeActionRouter(),
+            browser_agent=FakeBrowser(),
+            coding_agent=None,
+            tts=None,
+        )
+
+        proposals = await manager.review_self_improvement_proposals()
+        self.assertEqual(len(proposals), 1)
+        self.assertEqual(proposals[0]["id"], "proposal-1")
+
+        preview = await manager.run_next_self_improvement("C:/tmp/repo", approve=False)
+        self.assertEqual(preview["status"], "review")
+        self.assertEqual(preview["proposal"]["id"], "proposal-1")
+
+    async def test_agent_manager_executes_next_self_improvement_proposal_when_approved(self) -> None:
+        proposal = {
+            "id": "proposal-9",
+            "status": "pending",
+            "priority": "high",
+            "proposal_type": "code_change",
+            "title": "Investigate repeated browser failures",
+        }
+        memory = FakeMemory(proposals=[proposal])
+        coding_agent = FakeProposalCodingAgent()
+        manager = AgentManager(
+            llm=FakeLLM([]),
+            memory=memory,
+            action_router=FakeActionRouter(),
+            browser_agent=FakeBrowser(),
+            coding_agent=coding_agent,
+            tts=None,
+        )
+
+        result = await manager.run_next_self_improvement("C:/tmp/repo", approve=True)
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["proposal"]["id"], "proposal-9")
+        self.assertEqual(coding_agent.calls[0][1], "C:/tmp/repo")
+        self.assertEqual(memory.proposals[0]["status"], "completed")
 
     async def test_executor_returns_structured_trace_summary(self) -> None:
         executor = ExecutorAgent(FakeActionRouter(), FakeBrowser(texts=["Loaded"]), coding_agent=None, tts=None)

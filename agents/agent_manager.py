@@ -17,6 +17,7 @@ class AgentManager:
         self.llm     = llm
         self.memory  = memory
         self.planner = PlannerAgent(llm)
+        self.coding_agent = coding_agent
         self.executor = ExecutorAgent(action_router, browser_agent, coding_agent, tts)
         self._active_agents: list = []
 
@@ -76,6 +77,70 @@ class AgentManager:
         performance_metadata["agent_total_seconds"] = round(perf_counter() - started_at, 3)
         final_result["metadata"]["performance"] = performance_metadata
         return final_result
+
+    async def review_self_improvement_proposals(self, *, status: str = "pending", limit: int = 10) -> list[dict]:
+        """Return queued self-improvement proposals for inspection or approval."""
+        if not hasattr(self.memory, "read_improvement_proposals"):
+            return []
+        proposals = await self.memory.read_improvement_proposals(limit=limit, status=status)
+        return list(proposals)
+
+    async def run_next_self_improvement(
+        self,
+        repo_path: str,
+        *,
+        approve: bool = False,
+    ) -> dict:
+        """
+        Review or execute the highest-priority pending self-improvement proposal.
+
+        When approve is False, returns a preview and leaves proposal state untouched.
+        When approve is True, hands the proposal to the coding agent and updates status.
+        """
+        if not hasattr(self.memory, "select_next_proposal_for_coding"):
+            return {
+                "status": "unavailable",
+                "message": "Memory manager does not support improvement proposals yet.",
+            }
+
+        proposal = await self.memory.select_next_proposal_for_coding()
+        if proposal is None:
+            return {
+                "status": "empty",
+                "message": "No pending self-improvement proposals are ready for coding.",
+                "proposal": None,
+            }
+
+        if not approve:
+            return {
+                "status": "review",
+                "message": "Self-improvement proposal ready for review.",
+                "proposal": proposal,
+            }
+
+        if self.coding_agent is None:
+            return {
+                "status": "unavailable",
+                "message": "Coding agent is not configured for self-improvement execution.",
+                "proposal": proposal,
+            }
+
+        self._active_agents.append(self.coding_agent)
+        try:
+            result = await self.coding_agent.run_proposal(
+                proposal,
+                repo_path,
+                memory_manager=self.memory,
+            )
+        finally:
+            self._active_agents = [agent for agent in self._active_agents if agent is not self.coding_agent]
+
+        return {
+            "status": result.get("status", "unknown"),
+            "message": result.get("message", ""),
+            "proposal": proposal,
+            "result": result,
+        }
 
     async def cancel_all(self) -> None:
         """Cancel all active agents."""
