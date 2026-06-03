@@ -328,6 +328,7 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertEqual(repeated_failure_proposal["proposal_type"], "code_change")
             self.assertEqual(repeated_failure_proposal["priority"], "high")
+            self.assertTrue(repeated_failure_proposal["approval_policy"]["requires_human_approval"])
 
     async def test_memory_manager_generates_stage_specific_performance_hints(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -370,6 +371,7 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(performance_proposal["proposal_type"], "performance_tuning")
             self.assertEqual(performance_proposal["evidence"]["slowest_stage"], "execution_seconds")
             self.assertIn("voice/", performance_proposal["suggested_scope"])
+            self.assertTrue(performance_proposal["approval_policy"]["requires_human_approval"])
 
     async def test_memory_manager_queues_workflow_promotion_proposal_for_repeated_success(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -414,6 +416,7 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(workflow_proposal["domain"], "browser")
             self.assertEqual(workflow_proposal["evidence"]["chain"], "browser -> get_weather")
             self.assertEqual(workflow_proposal["priority"], "low")
+            self.assertEqual(workflow_proposal["approval_policy"]["mode"], "auto_eligible")
 
     async def test_memory_manager_selects_next_pending_proposal_for_coding(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -447,6 +450,44 @@ class MemoryTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(updated["status"], "in_progress")
             refreshed = await manager.read_improvement_proposals()
             self.assertEqual(refreshed[0]["status"], "in_progress")
+
+    async def test_memory_manager_appends_execution_history_to_proposal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "short_term_limit": 5,
+                "top_k_retrieval": 2,
+                "habit_retrieval_limit": 2,
+                "interaction_retrieval_limit": 5,
+                "chroma_path": str(Path(tmp) / ".chroma"),
+                "embedding_model": "BAAI/bge-m3",
+                "long_term_path": str(Path(tmp) / "memory.json"),
+            }
+            manager = MemoryManager(config)
+
+            for _ in range(3):
+                await manager.record_interaction(
+                    user_input="delete the old deployment file",
+                    response="Sorry, something went wrong.",
+                    status="error",
+                    latency_seconds=1.0,
+                    action_summary="delete_file target deployment",
+                    error_message="permission denied",
+                )
+
+            proposal = await manager.select_next_proposal_for_coding()
+            await manager.append_improvement_proposal_history(
+                proposal["id"],
+                {"event": "started", "status": "in_progress", "message": "Proposal execution started."},
+            )
+            await manager.append_improvement_proposal_history(
+                proposal["id"],
+                {"event": "finished", "status": "completed", "message": "Applied fix."},
+            )
+
+            refreshed = await manager.read_improvement_proposals()
+            self.assertEqual(refreshed[0]["attempt_count"], 2)
+            self.assertEqual(refreshed[0]["execution_history"][0]["event"], "started")
+            self.assertEqual(refreshed[0]["execution_history"][-1]["event"], "finished")
 
     async def test_memory_manager_suppresses_duplicate_proposals_within_cooldown(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

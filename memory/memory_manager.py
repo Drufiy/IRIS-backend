@@ -212,6 +212,10 @@ class MemoryManager:
         """Age stale proposals and escalate repeated failures to human review."""
         return await self.self_improvement.refresh_improvement_proposals()
 
+    async def append_improvement_proposal_history(self, proposal_id: str, event: dict) -> dict | None:
+        """Record an execution-history event for a proposal."""
+        return await self.self_improvement.append_improvement_proposal_history(proposal_id, event)
+
     def _hint_rank(self, hint: dict) -> tuple[int, int]:
         """Prefer stronger chain hints, then keep general hints in stable priority buckets."""
         hint_type = hint.get("type", "")

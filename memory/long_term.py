@@ -81,6 +81,23 @@ class LongTermMemory:
             return dict(proposal)
         return None
 
+    async def append_improvement_proposal_history(
+        self,
+        proposal_id: str,
+        event: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Append an execution-history event to a stored proposal."""
+        store = await self._read_store()
+        for proposal in store["improvement_proposals"]:
+            if proposal.get("id") != proposal_id:
+                continue
+            history = proposal.setdefault("execution_history", [])
+            history.append(event)
+            proposal["attempt_count"] = len(history)
+            await self._write_store(store)
+            return dict(proposal)
+        return None
+
     async def _read_store(self) -> dict[str, list[dict[str, Any]]]:
         """Loads the structured long-term memory store."""
         if not self.path.exists():

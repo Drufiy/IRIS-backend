@@ -114,6 +114,14 @@ class SelfImprovementManager:
         """Update the stored state of a proposal after review or execution."""
         return await self.long_term.update_improvement_proposal(proposal_id, **updates)
 
+    async def append_improvement_proposal_history(
+        self,
+        proposal_id: str,
+        event: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Append a history event to a stored proposal."""
+        return await self.long_term.append_improvement_proposal_history(proposal_id, event)
+
     async def select_next_proposal_for_coding(
         self,
         *,
@@ -263,6 +271,7 @@ class SelfImprovementManager:
 
         if repeated_failures >= 2:
             proposal_type = "code_change" if domain in {"browser", "coding", "files", "auth"} else "behavior_tuning"
+            approval_policy = self._approval_policy_for(proposal_type, domain, priority="high")
             proposals.append(
                 {
                     "id": str(uuid4()),
@@ -273,6 +282,7 @@ class SelfImprovementManager:
                     "source_interaction_id": record["id"],
                     "trigger": "repeated_failures",
                     "priority": "high",
+                    "approval_policy": approval_policy,
                     "title": f"Investigate repeated {domain} failures",
                     "summary": (
                         "Similar tasks have failed repeatedly. Review the failing flow and add a targeted fix "
@@ -286,11 +296,14 @@ class SelfImprovementManager:
                     },
                     "suggested_scope": self._suggest_scope(domain, action_summary),
                     "suggested_hints": [hint["value"] for hint in reflection.get("hints", [])],
+                    "execution_history": [],
+                    "attempt_count": 0,
                 }
             )
 
         if float(record.get("latency_seconds", 0.0)) >= 5:
             slowest_stage = self._slowest_stage(timing_breakdown)
+            approval_policy = self._approval_policy_for("performance_tuning", domain, priority="medium")
             proposals.append(
                 {
                     "id": str(uuid4()),
@@ -301,6 +314,7 @@ class SelfImprovementManager:
                     "source_interaction_id": record["id"],
                     "trigger": "slow_task",
                     "priority": "medium",
+                    "approval_policy": approval_policy,
                     "title": f"Reduce latency in {domain} flow",
                     "summary": (
                         "This task was noticeably slow. Review the slowest stage and trim context, actions, "
@@ -315,12 +329,15 @@ class SelfImprovementManager:
                     },
                     "suggested_scope": self._suggest_scope(domain, action_summary),
                     "suggested_hints": [hint["value"] for hint in reflection.get("hints", []) if hint.get("type") == "performance"],
+                    "execution_history": [],
+                    "attempt_count": 0,
                 }
             )
 
         if repeated_successes >= 2:
             chain_steps = self._extract_chain_steps(action_summary)
             if len(chain_steps) >= 2:
+                approval_policy = self._approval_policy_for("workflow_promotion", domain, priority="low")
                 proposals.append(
                     {
                         "id": str(uuid4()),
@@ -331,6 +348,7 @@ class SelfImprovementManager:
                         "source_interaction_id": record["id"],
                         "trigger": "repeated_success_chain",
                         "priority": "low",
+                        "approval_policy": approval_policy,
                         "title": f"Promote stable {domain} workflow",
                         "summary": (
                             "A similar multi-step workflow has succeeded repeatedly. Consider promoting it into "
@@ -344,6 +362,8 @@ class SelfImprovementManager:
                         },
                         "suggested_scope": self._suggest_scope(domain, action_summary),
                         "suggested_hints": [hint["value"] for hint in reflection.get("hints", []) if hint.get("type") in {"chain", "pattern"}],
+                        "execution_history": [],
+                        "attempt_count": 0,
                     }
                 )
 
@@ -673,6 +693,33 @@ class SelfImprovementManager:
             type_rank.get(proposal.get("proposal_type", ""), 0),
             proposal.get("created_at", ""),
         )
+
+    def _approval_policy_for(self, proposal_type: str, domain: str, *, priority: str) -> dict[str, Any]:
+        """Define whether a proposal may run automatically or needs explicit human approval."""
+        risky_domains = {"browser", "auth", "files", "coding"}
+        if proposal_type == "code_change":
+            return {
+                "mode": "manual",
+                "requires_human_approval": True,
+                "reason": "Code-change proposals require explicit approval before IRIS edits the repo.",
+            }
+        if proposal_type == "performance_tuning" and domain in risky_domains:
+            return {
+                "mode": "manual",
+                "requires_human_approval": True,
+                "reason": "This performance proposal touches a higher-risk domain and should be reviewed first.",
+            }
+        if proposal_type == "workflow_promotion" and priority == "low":
+            return {
+                "mode": "auto_eligible",
+                "requires_human_approval": False,
+                "reason": "Low-risk workflow promotions can be auto-eligible after review.",
+            }
+        return {
+            "mode": "manual",
+            "requires_human_approval": True,
+            "reason": "This proposal should be reviewed before execution.",
+        }
 
     def _promote_priority(self, priority: str) -> str:
         """Promote a proposal priority by one level, capping at high."""

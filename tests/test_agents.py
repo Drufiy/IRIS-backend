@@ -47,6 +47,7 @@ class FakeMemory:
         self.hints = hints or []
         self.proposals = proposals or []
         self.updates: list[tuple[str, dict]] = []
+        self.history_events: list[tuple[str, dict]] = []
 
     async def get_planning_hints(self, query: str) -> list[dict]:
         return list(self.hints)
@@ -57,6 +58,16 @@ class FakeMemory:
             if proposal.get("id") == proposal_id:
                 proposal.update(updates)
         return {"id": proposal_id, **updates}
+
+    async def append_improvement_proposal_history(self, proposal_id: str, event: dict) -> dict:
+        self.history_events.append((proposal_id, dict(event)))
+        for proposal in self.proposals:
+            if proposal.get("id") == proposal_id:
+                history = proposal.setdefault("execution_history", [])
+                history.append(dict(event))
+                proposal["attempt_count"] = len(history)
+                return dict(proposal)
+        return {"id": proposal_id}
 
     async def read_improvement_proposals(self, limit: int | None = None, status: str | None = None) -> list[dict]:
         proposals = list(self.proposals)
@@ -108,7 +119,15 @@ class FakeProposalCodingAgent:
         self.calls.append((dict(proposal), repo_path, memory_manager))
         if memory_manager is not None and proposal.get("id"):
             await memory_manager.update_improvement_proposal(proposal["id"], status="in_progress")
+            await memory_manager.append_improvement_proposal_history(
+                proposal["id"],
+                {"event": "started", "status": "in_progress", "message": "Proposal execution started."},
+            )
             await memory_manager.update_improvement_proposal(proposal["id"], status="completed", resolution=self.result["message"])
+            await memory_manager.append_improvement_proposal_history(
+                proposal["id"],
+                {"event": "finished", "status": "completed", "message": self.result["message"]},
+            )
         return dict(self.result, proposal_id=proposal.get("id"))
 
     async def cancel(self) -> None:
@@ -231,6 +250,7 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
                 "summary": "Tighten the browser flow.",
                 "domain": "browser",
                 "priority": "high",
+                "approval_policy": {"mode": "manual", "requires_human_approval": True},
                 "suggested_scope": ["browser/", "agents/executor.py"],
                 "suggested_hints": ["wait_for_page_and_retry_selector"],
                 "evidence": {"user_input": "check weather in browser", "action_summary": "browser:error"},
@@ -240,9 +260,13 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(result["status"], "ok")
             self.assertEqual(result["proposal_id"], "proposal-123")
-            self.assertEqual(memory.updates[0], ("proposal-123", {"status": "in_progress"}))
+            self.assertEqual(memory.updates[0][0], "proposal-123")
+            self.assertEqual(memory.updates[0][1]["status"], "in_progress")
             self.assertEqual(memory.updates[-1][0], "proposal-123")
             self.assertEqual(memory.updates[-1][1]["status"], "completed")
+            self.assertEqual(len(memory.history_events), 2)
+            self.assertEqual(memory.history_events[0][1]["event"], "started")
+            self.assertEqual(memory.history_events[-1][1]["event"], "finished")
 
     async def test_planner_receives_structured_hints(self) -> None:
         llm = FakeLLM(['[{"id": 1, "action_type": "voice", "description": "ok", "params": {}}]'])
@@ -483,6 +507,7 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
             "priority": "high",
             "proposal_type": "code_change",
             "title": "Investigate repeated browser failures",
+            "approval_policy": {"mode": "manual", "requires_human_approval": True},
         }
         manager = AgentManager(
             llm=FakeLLM([]),
@@ -500,6 +525,7 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
         preview = await manager.run_next_self_improvement("C:/tmp/repo", approve=False)
         self.assertEqual(preview["status"], "review")
         self.assertEqual(preview["proposal"]["id"], "proposal-1")
+        self.assertTrue(preview["approval_policy"]["requires_human_approval"])
 
     async def test_agent_manager_executes_next_self_improvement_proposal_when_approved(self) -> None:
         proposal = {
@@ -508,6 +534,7 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
             "priority": "high",
             "proposal_type": "code_change",
             "title": "Investigate repeated browser failures",
+            "approval_policy": {"mode": "manual", "requires_human_approval": True},
         }
         memory = FakeMemory(proposals=[proposal])
         coding_agent = FakeProposalCodingAgent()
@@ -526,6 +553,32 @@ class CodingAgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["proposal"]["id"], "proposal-9")
         self.assertEqual(coding_agent.calls[0][1], "C:/tmp/repo")
         self.assertEqual(memory.proposals[0]["status"], "completed")
+        self.assertEqual(memory.proposals[0]["attempt_count"], 2)
+
+    async def test_agent_manager_can_auto_run_auto_eligible_proposal(self) -> None:
+        proposal = {
+            "id": "proposal-auto",
+            "status": "pending",
+            "priority": "low",
+            "proposal_type": "workflow_promotion",
+            "title": "Promote stable browser workflow",
+            "approval_policy": {"mode": "auto_eligible", "requires_human_approval": False},
+        }
+        memory = FakeMemory(proposals=[proposal])
+        coding_agent = FakeProposalCodingAgent()
+        manager = AgentManager(
+            llm=FakeLLM([]),
+            memory=memory,
+            action_router=FakeActionRouter(),
+            browser_agent=FakeBrowser(),
+            coding_agent=coding_agent,
+            tts=None,
+        )
+
+        result = await manager.run_next_self_improvement("C:/tmp/repo", allow_auto=True)
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["proposal"]["id"], "proposal-auto")
 
     async def test_executor_returns_structured_trace_summary(self) -> None:
         executor = ExecutorAgent(FakeActionRouter(), FakeBrowser(texts=["Loaded"]), coding_agent=None, tts=None)

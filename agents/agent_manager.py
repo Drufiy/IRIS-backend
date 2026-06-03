@@ -90,6 +90,7 @@ class AgentManager:
         repo_path: str,
         *,
         approve: bool = False,
+        allow_auto: bool = False,
     ) -> dict:
         """
         Review or execute the highest-priority pending self-improvement proposal.
@@ -111,11 +112,16 @@ class AgentManager:
                 "proposal": None,
             }
 
-        if not approve:
+        approval_policy = proposal.get("approval_policy", {})
+        requires_human_approval = bool(approval_policy.get("requires_human_approval", True))
+        is_auto_eligible = approval_policy.get("mode") == "auto_eligible"
+
+        if not approve and not (allow_auto and is_auto_eligible and not requires_human_approval):
             return {
                 "status": "review",
                 "message": "Self-improvement proposal ready for review.",
                 "proposal": proposal,
+                "approval_policy": approval_policy,
             }
 
         if self.coding_agent is None:
@@ -123,6 +129,7 @@ class AgentManager:
                 "status": "unavailable",
                 "message": "Coding agent is not configured for self-improvement execution.",
                 "proposal": proposal,
+                "approval_policy": approval_policy,
             }
 
         self._active_agents.append(self.coding_agent)
@@ -140,6 +147,7 @@ class AgentManager:
             "message": result.get("message", ""),
             "proposal": proposal,
             "result": result,
+            "approval_policy": approval_policy,
         }
 
     async def cancel_all(self) -> None:

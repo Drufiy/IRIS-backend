@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
@@ -125,10 +126,21 @@ class CodingAgent(BaseAgent):
     ) -> dict[str, Any]:
         """Execute a single approved self-improvement proposal through the normal coding loop."""
         proposal_id = proposal.get("id", "")
+        started_at = datetime.now(timezone.utc).isoformat()
         if memory_manager is not None and proposal_id:
             await memory_manager.update_improvement_proposal(
                 proposal_id,
                 status="in_progress",
+                last_run_started_at=started_at,
+            )
+            await memory_manager.append_improvement_proposal_history(
+                proposal_id,
+                {
+                    "timestamp": started_at,
+                    "event": "started",
+                    "status": "in_progress",
+                    "message": "Proposal execution started.",
+                },
             )
 
         goal = self._goal_from_proposal(proposal)
@@ -138,10 +150,22 @@ class CodingAgent(BaseAgent):
 
         if memory_manager is not None and proposal_id:
             next_status = "completed" if result.get("status") == "ok" else "escalated"
+            finished_at = datetime.now(timezone.utc).isoformat()
             await memory_manager.update_improvement_proposal(
                 proposal_id,
                 status=next_status,
                 resolution=result.get("message", ""),
+                last_run_finished_at=finished_at,
+            )
+            await memory_manager.append_improvement_proposal_history(
+                proposal_id,
+                {
+                    "timestamp": finished_at,
+                    "event": "finished",
+                    "status": next_status,
+                    "message": result.get("message", ""),
+                    "iterations": result.get("iterations"),
+                },
             )
 
         return result
