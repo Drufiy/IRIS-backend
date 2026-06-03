@@ -23,11 +23,10 @@ DEEPSEEK_MODELS = {
 class DeepSeekProvider(BaseLLMProvider):
     """Async client wrapper for DeepSeek chat completions."""
 
-    BASE_URL = "https://api.deepseek.com"
-
     def __init__(self, model: str, config: dict, client=None):
         self.model = DEEPSEEK_MODELS.get(model, model)
-        self.api_key = config.get("deepseek_api_key", "")
+        self.api_key = config.get("api_key") or config.get("deepseek_api_key", "")
+        self.base_url = config.get("base_url", "https://api.deepseek.com").rstrip("/")
         self.timeout = config.get("request_timeout_seconds", 60)
         self._client = client
 
@@ -59,7 +58,7 @@ class DeepSeekProvider(BaseLLMProvider):
 
         if self._client is not None:
             response = await self._client.post(
-                f"{self.BASE_URL}/chat/completions",
+                f"{self.base_url}/chat/completions",
                 json=payload,
                 headers=self._headers(),
                 timeout=self.timeout,
@@ -69,7 +68,7 @@ class DeepSeekProvider(BaseLLMProvider):
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{self.BASE_URL}/chat/completions",
+                f"{self.base_url}/chat/completions",
                 json=payload,
                 headers=self._headers(),
                 timeout=self.timeout,
@@ -93,7 +92,7 @@ class DeepSeekProvider(BaseLLMProvider):
 
         if self._client is not None:
             response = await self._client.post(
-                f"{self.BASE_URL}/chat/completions",
+                f"{self.base_url}/chat/completions",
                 json=payload,
                 headers=self._headers(),
                 timeout=self.timeout,
@@ -110,7 +109,7 @@ class DeepSeekProvider(BaseLLMProvider):
         async with httpx.AsyncClient() as client:
             async with client.stream(
                 "POST",
-                f"{self.BASE_URL}/chat/completions",
+                f"{self.base_url}/chat/completions",
                 json=payload,
                 headers=self._headers(),
                 timeout=self.timeout,

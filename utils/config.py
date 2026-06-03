@@ -25,7 +25,13 @@ def load_config(settings_path: str = "configs/settings.yaml") -> dict:
     config.setdefault("voice", {})
     config.setdefault("asr", {})
 
-    config["llm"]["deepseek_api_key"] = os.getenv("DEEPSEEK_API_KEY", "")
+    llm_api_key_env = config["llm"].get("api_key_env", "AGENT_ROUTER_TOKEN")
+    llm_api_key = os.getenv(llm_api_key_env, "")
+    if not llm_api_key:
+        llm_api_key = os.getenv("DEEPSEEK_API_KEY", "")
+    config["llm"]["api_key"] = llm_api_key
+    config["llm"]["deepseek_api_key"] = llm_api_key
+    config["llm"]["base_url"] = config["llm"].get("base_url", "https://api.deepseek.com")
     config["voice"]["elevenlabs_api_key"] = os.getenv("ELEVENLABS_API_KEY", "")
     config["asr"]["groq_api_key"] = os.getenv("GROQ_API_KEY", "")
 

@@ -138,12 +138,16 @@ class IRISEventLoop:
 
     async def _handle_transcript(self, text: str) -> None:
         """Route transcript: interrupts take priority, rest go to task queue."""
-        if any(phrase in text.lower() for phrase in INTERRUPT_PHRASES):
+        normalized = text.strip()
+        if not normalized or not any(ch.isalnum() for ch in normalized):
+            logger.info(f"Ignoring empty/punctuation-only transcript: '{text}'")
+            return
+        if any(phrase in normalized.lower() for phrase in INTERRUPT_PHRASES):
             logger.info(f"Interrupt detected: '{text}'")
             await self._stop()
             return
-        logger.info(f"Transcript queued: '{text}'")
-        await self._task_queue.put(text)
+        logger.info(f"Transcript queued: '{normalized}'")
+        await self._task_queue.put(normalized)
 
     async def _task_worker(self) -> None:
         """Pull goals from the queue, run agents, speak response."""

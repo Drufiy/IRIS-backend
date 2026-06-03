@@ -14,9 +14,11 @@ class TTSRouter:
 
     def __init__(self, config: dict) -> None:
         api_key  = config["elevenlabs_api_key"]
+        voice_name = config.get("elevenlabs_voice_name", "Rachel")
         voice_id = config.get("elevenlabs_voice_id", "21m00Tcm4TlvDq8ikWAM")
         model    = config.get("elevenlabs_model", "eleven_flash_v2_5")
 
+        self.voice_name = voice_name
         self._elevenlabs = ElevenLabsTTS(
             api_key=api_key,
             voice_id=voice_id,
@@ -29,7 +31,12 @@ class TTSRouter:
         """Speak text via the configured TTS backend."""
         if not text or not text.strip():
             return
-        logger.info(f"TTS speak: '{text[:80]}{'...' if len(text) > 80 else ''}'")
+        logger.info(
+            "TTS speak with ElevenLabs voice {}: '{}{}'",
+            self.voice_name,
+            text[:80],
+            "..." if len(text) > 80 else "",
+        )
         try:
             await self._elevenlabs.speak(text)
         except Exception as e:

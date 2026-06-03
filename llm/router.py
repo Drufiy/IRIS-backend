@@ -24,7 +24,7 @@ class LLMRouter:
     def __init__(self, config: dict, providers: dict[str, BaseLLMProvider] | None = None):
         self.config = config
         self.logger = logging.getLogger("iris.llm.router")
-        self.default = config.get("default_model", "deepseek-flash")
+        self.default = config.get("default_model", "deepseek-v4-flash")
         self.task_routing = {**TASK_MODEL_MAP, **config.get("task_routing", {})}
         self.session_token_budget = int(config.get("session_token_budget", 0) or 0)
         self.enforce_budget = bool(config.get("enforce_token_budget", False))
@@ -38,6 +38,8 @@ class LLMRouter:
             self.providers = {
                 "deepseek-v4-flash": DeepSeekProvider("deepseek-v4-flash", config),
                 "deepseek-v4-pro": DeepSeekProvider("deepseek-v4-pro", config),
+                "deepseek-chat": DeepSeekProvider("deepseek-chat", config),
+                "deepseek-reasoner": DeepSeekProvider("deepseek-reasoner", config),
             }
         else:
             self.providers = providers

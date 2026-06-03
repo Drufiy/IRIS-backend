@@ -1,4 +1,7 @@
 llm:
+  provider: "agentrouter"
+  base_url: "https://agentrouter.org/v1"
+  api_key_env: "AGENT_ROUTER_TOKEN"
   default_model: "deepseek-v4-flash"    # Default for general tasks
   task_routing:
     plan:   "deepseek-v4-flash"
@@ -25,6 +28,7 @@ asr:
   model: "whisper-large-v3-turbo"
   groq_api_key: ""                  # Injected from $GROQ_API_KEY env var or keys.env
 voice:
+  elevenlabs_voice_name: "Rachel"       # Human-readable label for the selected voice
   elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"   # Rachel (female, conversational)
   elevenlabs_model: "eleven_flash_v2_5"
   stream: true
