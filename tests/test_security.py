@@ -53,9 +53,9 @@ class SecurityTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("allowlist", result["result"].lower())
 
     async def test_run_shell_allows_simple_safe_command(self) -> None:
-        result = await run_shell("py --version")
+        result = await run_shell("echo hello")
         self.assertEqual(result["status"], "ok")
-        self.assertIn("python", result["result"].lower())
+        self.assertEqual(result["result"], "hello")
 
     async def test_write_file_blocks_protected_root_path(self) -> None:
         result = await write_file(str(Path.home()), "nope")
@@ -71,12 +71,17 @@ class SecurityTests(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp) / "note.txt"
             src.write_text("hello", encoding="utf-8")
-            protected_base = Path.home()
+            # On Windows, block writes to SystemRoot subdirectories
             if "SystemRoot" in __import__("os").environ:
                 protected_base = Path(__import__("os").environ["SystemRoot"])
-            result = await move_file(str(src), str(protected_base / "moved.txt"))
-            self.assertEqual(result["status"], "blocked")
-            self.assertIn("protected path", result["result"].lower())
+                result = await move_file(str(src), str(protected_base / "moved.txt"))
+                self.assertEqual(result["status"], "blocked")
+                self.assertIn("protected path", result["result"].lower())
+            else:
+                # On macOS/Linux, block exact root path but allow subdirectories
+                result = await move_file(str(src), "/")
+                self.assertEqual(result["status"], "blocked")
+                self.assertIn("protected path", result["result"].lower())
 
     async def test_write_file_allows_temp_workspace_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -23,18 +23,22 @@ def _resolve_path(path_str: str) -> Path:
 
 
 def _is_protected_path(path: Path) -> bool:
-    """Reject writes/moves/deletes against highly sensitive locations."""
+    """Reject writes/moves/deletes against sensitive locations.
+
+    - Blocks exact match for / (root) and $HOME
+    - Blocks subdirectories of SystemRoot, WINDIR, ProgramFiles
+    - Allows writing anywhere else (e.g. /tmp/foo, $HOME/Documents)
+    """
     if path == path.anchor:
         return True
     if len(path.parts) <= 1:
         return True
     for protected in PROTECTED_PATH_PREFIXES:
         try:
-            if protected == Path.home():
-                if path == protected:
-                    return True
-                continue
-            if path == protected or protected in path.parents:
+            if path == protected:
+                return True
+            # Block writes to subdirectories of system roots but NOT $HOME or /
+            if protected not in (Path.home(), Path("/")) and protected in path.parents:
                 return True
         except Exception:
             continue

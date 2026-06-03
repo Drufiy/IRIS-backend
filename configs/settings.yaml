@@ -23,7 +23,7 @@ audio:
 
 asr:
   model: "whisper-large-v3-turbo"
-
+  groq_api_key: ""                  # Injected from $GROQ_API_KEY env var or keys.env
 voice:
   elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"   # Rachel (default ElevenLabs voice)
   elevenlabs_model: "eleven_turbo_v2"

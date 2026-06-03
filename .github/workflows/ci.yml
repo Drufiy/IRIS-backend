@@ -10,5 +10,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install numpy
-      - run: python main.py
+      - name: Install core dependencies
+        run: |
+          pip install numpy pytest loguru httpx pyyaml python-dotenv aiofiles websockets
+      - name: Run core tests
+        run: python -m pytest tests/ -v \
+          --ignore=tests/test_audio.py \
+          --ignore=tests/test_browser.py \
+          --ignore=tests/test_memory.py

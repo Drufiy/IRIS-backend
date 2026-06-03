@@ -29,7 +29,7 @@
 IRIS is an open-source voice-controlled AI assistant designed for Windows that bridges the gap between natural language commands and system actions. It combines:
 
 - **Voice Input** — Speak naturally; IRIS listens and understands
-- **AI Reasoning** — DeepSeek/Claude-powered decision making
+- **AI Reasoning** — DeepSeek Flash + Pro-powered decision making
 - **System Actions** — Execute files, apps, browser automation, emails, tasks
 - **Memory** — Learns from past interactions and maintains context
 - **Real-time UI** — Transparent overlay with state feedback
@@ -44,10 +44,12 @@ IRIS is an open-source voice-controlled AI assistant designed for Windows that b
 
 **Current Status:**
 
-- **Phase 1** ✅ Complete (core audio, LLM, agents, basic actions)
+- **Phase 1** ✅ Complete (core audio, LLM, agents, 12 basic actions, memory, UI overlay)
 - **Phase 2** ✅ Complete (browser, coding agent, credential encryption, CLI)
-- **Phase 3-4** ✅ Complete (email, todo, weather, timers)
-- **Pre-Launch** 🟡 In Progress (performance optimization, error handling, testing)
+- **Phase 3** ✅ Complete (email, todo, weather, timers, self-improvement)
+- **Phase 4** 🟡 In Progress (cross-platform testing, config alignment, CI pipeline, documentation sync)
+
+> ⚠️ **Note:** The local Qwen2.5/Ollama fallback has been removed — IRIS now uses DeepSeek-only routing. Internet is required for all APIs.
 
 ---
 
@@ -358,7 +360,7 @@ Say: "Iris, what time is it?"
 
 | Feature | Implementation | Status |
 |---------|---|--------|
-| LLM routing | DeepSeek + local Qwen2.5 | ✅ |
+| LLM routing | DeepSeek Flash + Pro (task-aware routing) | ✅ |
 | Task planning | Planner agent (decomposition) | ✅ |
 | Task execution | Executor agent (orchestration) | ✅ |
 | Code generation | Coding agent (write & run) | ✅ |
@@ -366,10 +368,10 @@ Say: "Iris, what time is it?"
 | Prompt engineering | Dynamic prompt construction | ✅ |
 
 **Supported Models:**
-- **DeepSeek Flash** — Fast reasoning (default)
-- **DeepSeek Pro** — Complex reasoning
-- **Qwen2.5:7b** — Local fallback (offline capable)
-- **Claude** — (Future: paid integration)
+- **DeepSeek Flash** — Fast reasoning (default for planning/chat/memory)
+- **DeepSeek Pro** — Complex reasoning (code/reason tasks)
+- ~~Qwen2.5:7b~~ — Removed in v0.2.1 (DeepSeek-only routing)
+- ~~Claude~~ — Not yet implemented
 
 ### 📁 File Operations (Complete)
 
@@ -445,7 +447,7 @@ Say: "Iris, what time is it?"
 - Screenshot capture
 - Form filling
 
-### 📧 Email (Complete — NEW)
+### 📧 Email (Complete)
 
 ```
 "Send email to bob@example.com, subject: Hello, body: How are you?"
@@ -460,12 +462,14 @@ Say: "Iris, what time is it?"
 - `check_email` — Check inbox (SAFE)
 
 **Providers:**
-- Gmail (app-specific password)
+- Gmail (app-specific password required)
 - Outlook/Microsoft 365
 - Yahoo, ProtonMail, iCloud
 - Any SMTP/IMAP provider
 
-### ✅ Todo Manager (Complete — NEW)
+**Status:** ✅ Implemented & tested. Credentials stored in `configs/settings.yaml` (plaintext)
+
+### ✅ Todo Manager (Complete)
 
 ```
 "Add task: finish project report, priority high"
@@ -492,9 +496,9 @@ Say: "Iris, what time is it?"
 - Normal (⚪ White) — Regular
 - Low (🟢 Green) — Nice-to-have
 
-**Storage:** `~/.iris/tasks.json` (persistent)
+**Storage:** `~/.iris/tasks.json` (persistent JSON file)
 
-### 🌤️ Weather API (Complete — NEW)
+### 🌤️ Weather API (Complete)
 
 ```
 "What's the weather?"
@@ -511,23 +515,23 @@ Say: "Iris, what time is it?"
 - `get_weather` — Current conditions (SAFE)
 - `get_forecast` — Multi-day forecast (SAFE)
 
-**Provider:** OpenWeatherMap (free tier)  
+**Provider:** OpenWeatherMap (free tier, 1000 calls/day)
 **Features:**
 - Current: temp, humidity, wind, description
 - Forecast: 3-5 days ahead
 - Location-based or default city
 - Supports all cities worldwide
 
-### ⏱️ Timer & Reminders (Complete — NEW)
+### ⏱️ Timer & Reminders (Complete)
 
 ```
 "Set timer for 10 minutes"
 → Countdown starts
-→ [10 min later] 🔔 TIMER ALERT: Timer is done!
+→ [10 min later] 🔔 TIMER ALERT: Timer is done! (printed to console — TTS alert pending)
 
 "Remind me to check email in 30 minutes"
 → Reminder scheduled
-→ [30 min later] Reminder displayed
+→ [30 min later] Reminder displayed (pending: notification/alert)
 
 "Show my reminders"
 → Lists all upcoming reminders
@@ -545,6 +549,8 @@ Say: "Iris, what time is it?"
 **Storage:**
 - Timers: In-memory (lost on restart)
 - Reminders: `~/.iris/reminders.json` (persistent)
+
+> ⚠️ **Note:** Timer alerts currently print to console only. TTS integration is tracked as a TODO.
 
 ### 📋 Clipboard (Complete)
 
@@ -577,20 +583,26 @@ Say: "Iris, what time is it?"
 ### 💾 Memory System (Complete)
 
 **Short-term Memory:**
-- Last 20 messages in session
-- Injected into every LLM prompt
-- Provides immediate context
+- Last 20 messages in session buffer
+- Injected into every LLM prompt for immediate context
 
 **Long-term Memory:**
-- All conversations vectorized (BGE-M3)
-- Stored in Chroma DB
+- All conversations vectorized with BGE-M3 embeddings
+- Stored in ChromaDB with graceful TF-IDF fallback
 - Semantic search: "What did I ask yesterday?"
-- Expandable with new vectors
 
 **Knowledge Graph:**
 - Facts extracted from conversations
-- Relationships between entities
+- Entity relationships tracked (NetworkX)
 - Habit patterns over time
+
+**Self-Improvement System:**
+- ✅ Interaction recording with timing breakdowns
+- ✅ Reflection generation (success/failure patterns)
+- ✅ Action chain learning (preferred subtask ordering)
+- ✅ Repeated failure detection with risk hints
+- ✅ Planning hint injection into LLM prompts
+- ✅ Planner bias (reorders subtasks toward learned chains)
 
 ---
 
@@ -619,7 +631,7 @@ Say: "Iris, what time is it?"
 
 | API | Purpose | Cost | Status |
 |-----|---------|------|--------|
-| DeepSeek | Advanced reasoning | ~$0.01 per 1M tokens | Optional (fallback: Qwen) |
+| DeepSeek | LLM reasoning (Flash + Pro) | ~$0.01/1M tokens | **Required** (no local fallback) |
 | ElevenLabs | Voice synthesis | Free tier: 10k chars/month | Optional (fallback: system TTS) |
 | Groq | Speech-to-text | Free tier: 3600 RPM | Recommended |
 | OpenWeatherMap | Weather data | Free tier: 1000 calls/day | Optional (Weather feature) |
@@ -717,7 +729,7 @@ llm:
     chat: "deepseek-flash"
     code: "deepseek-pro"
     reason: "deepseek-pro"
-    local: "qwen2.5:7b"  # Offline fallback
+    # local fallback removed in v0.2.1 — DeepSeek-only
 
 # Audio Configuration
 audio:
@@ -725,7 +737,12 @@ audio:
   channels: 1
   dtype: "float32"
   wake_words: ["jarvis", "iris"]
-  groq_api_key: ""  # For ASR
+  # groq_api_key now read from `asr` section (see below)
+
+# ASR Configuration
+asr:
+  model: "whisper-large-v3-turbo"
+  groq_api_key: ""  # Groq Whisper API key
 
 # Voice/TTS Configuration
 voice:
@@ -1255,16 +1272,17 @@ print(mm.semantic_search("email"))  # Search past interactions
 5. Test: `openwakeword-cli` (if installed)
 
 #### "DeepSeek API key not found"
-**Problem:** IRIS falls back to Qwen2.5.
+**Problem:** IRIS cannot start LLM operations.
 
 **Solution:**
-1. Get key from deepseek.com
-2. Add to `configs/settings.yaml`:
-   ```yaml
-   llm:
-     deepseek_api_key: "sk_xxxxx"
+1. Get a key from deepseek.com
+2. Add to `configs/keys.env`:
+   ```
+   DEEPSEEK_API_KEY=sk_xxxxx
    ```
 3. Restart IRIS
+
+> Note: Unlike previous versions, there is no local Qwen2.5 fallback. A DeepSeek API key is **required**.
 
 #### "ASR timeout / Groq not responding"
 **Problem:** Speech-to-text hangs.
@@ -1407,7 +1425,7 @@ print(mm.semantic_search("email"))  # Search past interactions
 A: Yes, IRIS is MIT licensed (open source, free to use/modify/distribute).
 
 **Q: Do I need to pay for APIs?**  
-A: Optional APIs (DeepSeek, ElevenLabs, Groq, OpenWeatherMap) have free tiers. IRIS works offline with local Qwen2.5 model.
+A: DeepSeek, ElevenLabs, and Groq have free/paid tiers. Unlike earlier versions, IRIS no longer includes a local Qwen2.5 fallback — a DeepSeek API key is **required** for LLM operations.
 
 ### Privacy
 
@@ -1423,7 +1441,7 @@ A: Short-term (session buffer) + long-term (vector DB on your PC). No cloud back
 ### Troubleshooting
 
 **Q: Can IRIS work without internet?**  
-A: Partially. Local Qwen2.5 + local Whisper (optional) work offline. Cloud APIs (DeepSeek, TTS, ASR) require internet.
+A: No — IRIS uses cloud APIs exclusively (DeepSeek for LLM, Groq for ASR, ElevenLabs for TTS). The local Qwen2.5 fallback has been removed in favor of better DeepSeek performance. Stable broadband is required for all operations.
 
 **Q: How do I uninstall IRIS?**  
 A: Delete the `Iris/` folder. Config/memory stored in `~/.iris/` — delete manually if desired.
@@ -1445,10 +1463,10 @@ A: Currently internal only. External API planned for Phase 5.
 ### Compatibility
 
 **Q: Does IRIS work on Mac?**  
-A: Not yet (Phase 6). Python code is cross-platform; Tauri UI needs macOS setup.
+A: Yes! macOS is a primary development target alongside Windows. Aradhya develops and tests on macOS. The Tauri overlay uses `macOSPrivateApi` for transparent window support.
 
 **Q: Does IRIS work on Linux?**  
-A: Partial (command-line only). Full Tauri support in Phase 6.
+A: Partial (command-line only via `--headless`). Full Tauri support is planned but not yet available.
 
 **Q: Does IRIS work on mobile?**  
 A: No, but companion mobile app planned for Phase 6.
@@ -1492,7 +1510,7 @@ See `LICENSE` file for details.
 **Technologies:**
 - Python (runtime)
 - Groq Whisper (ASR)
-- DeepSeek / Qwen (LLM)
+- DeepSeek Flash + Pro (LLM)
 - ElevenLabs (TTS)
 - Playwright (browser)
 - Tauri (UI)
@@ -1527,9 +1545,9 @@ See `LICENSE` file for details.
 **Initial Release:**
 - Core event loop + state machine
 - Audio capture + wake word detection
-- LLM integration (DeepSeek + Qwen fallback)
-- Agent system (Planner, Executor, Coding)
-- 15+ actions (files, OS, browser, shell)
+- LLM integration (DeepSeek Flash + Pro, no local fallback)
+- Agent system (Planner, Executor, Coding, AgentManager)
+- 24 actions (files, OS, shell, clipboard, screenshot, OCR, browser, email, todo, weather, timer)
 - Memory system (short + long term)
 - Tauri UI overlay
 - Windows support

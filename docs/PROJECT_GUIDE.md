@@ -72,7 +72,7 @@ IRIS (**Intelligent Real-time Interactive System**) is an open-source, voice-con
 ### Long-term (1-2 years)
 - Mobile companion app (iOS/Android)
 - Multi-user / enterprise features
-- Vision capabilities (screen understanding via LLM vision)
+- Advanced vision capabilities (screen understanding via LLM)
 - Open ecosystem with third-party action marketplace
 - Multi-language support
 
@@ -578,10 +578,10 @@ Two-week sprint to complete Phase 2 and stabilize for pre-launch. All three team
 |--------|-------|
 | Audio | listener.py, asr.py, groq_whisper_backend.py, wake_word.py, interrupt_handler.py |
 | LLM | router.py, prompt_manager.py, deepseek_provider.py |
-| Memory | memory_manager.py, short_term.py, long_term.py, vector_store.py, graph.py |
+| Memory | memory_manager.py, short_term.py, long_term.py, vector_store.py, graph.py, self_improvement.py |
 | Browser | browser_agent.py, login_handler.py, scraper.py |
 | Agents | coding_agent.py, base_agent.py |
-| Phase 2 | Action chaining, token budgeting, wake word tuning |
+| Phase 2 | Action chaining, token budgeting, wake word tuning — all COMPLETE |
 
 ### Maneesh
 **Platform:** Windows  |  **Focus:** New actions, integrations, documentation
