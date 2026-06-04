@@ -2,14 +2,14 @@ llm:
   provider: "agentrouter"
   base_url: "https://agentrouter.org/v1"
   api_key_env: "AGENT_ROUTER_TOKEN"
-  default_model: "deepseek-v3.1"    # Default for general tasks
+  default_model: "deepseek-v4-flash"    # Default for general tasks
   task_routing:
-    plan:   "deepseek-v3.1"
-    chat:   "deepseek-v3.1"
-    code:   "deepseek-v3.1"
-    reason: "deepseek-v3.1"
-    local:  "deepseek-v3.1"
-    memory: "deepseek-v3.1"
+    plan:   "deepseek-v4-flash"
+    chat:   "deepseek-v4-flash"
+    code:   "deepseek-v4-pro"
+    reason: "deepseek-v4-pro"
+    local:  "deepseek-v4-flash"
+    memory: "deepseek-v4-flash"
 
 memory:
   chroma_path: "~/.iris/memory/chroma"

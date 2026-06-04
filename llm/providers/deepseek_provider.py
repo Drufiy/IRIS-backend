@@ -13,9 +13,10 @@ except ImportError:  # pragma: no cover - exercised only in dependency-light env
 from llm.providers.base import BaseLLMProvider
 
 DEEPSEEK_MODELS = {
-    "deepseek-chat": "deepseek-v3.1",
-    "deepseek-reasoner": "deepseek-v3.1",
-    "deepseek-v3.1": "deepseek-v3.1",
+    "deepseek-chat": "deepseek-v4-flash",
+    "deepseek-reasoner": "deepseek-v4-pro",
+    "deepseek-v4-flash": "deepseek-v4-flash",
+    "deepseek-v4-pro": "deepseek-v4-pro",
 }
 
 
