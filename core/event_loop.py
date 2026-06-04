@@ -98,7 +98,12 @@ class IRISEventLoop:
                         if rms < 1e-3:
                             continue
 
-                        result = await self.asr.transcribe(audio)
+                        try:
+                            result = await self.asr.transcribe(audio)
+                        except Exception as exc:
+                            logger.error(f"IDLE ASR failed: {exc}")
+                            buffer = []
+                            continue
                         text = result.get("transcript", "").strip()
                         if text:
                             logger.info(f"[IDLE ASR] '{text}'")
@@ -119,7 +124,11 @@ class IRISEventLoop:
                         audio = np.concatenate(buffer)
                         buffer = []
                         silence_run = 0
-                        result = await self.asr.transcribe(audio)
+                        try:
+                            result = await self.asr.transcribe(audio)
+                        except Exception as exc:
+                            logger.error(f"INTERACTIVE ASR failed: {exc}")
+                            continue
                         text = result.get("transcript", "").strip()
                         if text:
                             logger.info(f"[INTERACTIVE ASR] '{text}'")

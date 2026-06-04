@@ -6,6 +6,7 @@ import io
 import wave
 
 import numpy as np
+from loguru import logger
 
 
 class GroqWhisperBackend:
@@ -35,11 +36,56 @@ class GroqWhisperBackend:
         buf.seek(0)
         buf.name = "audio.wav"
 
-        transcription = self.client.audio.transcriptions.create(
-            file=buf,
-            model=self.model,
-            language="en",
-            response_format="text",
-        )
-        text = transcription.strip() if isinstance(transcription, str) else transcription.text.strip()
-        return {"transcript": text, "confidence": 1.0, "language": "en"}
+        try:
+            transcription = self.client.audio.transcriptions.create(
+                file=buf,
+                model=self.model,
+                language="en",
+                response_format="verbose_json",
+            )
+        except Exception as exc:  # pragma: no cover - network/provider failures
+            logger.error(f"Groq ASR error: {exc}")
+            return {"transcript": "", "confidence": 0.0, "language": "en"}
+
+        text = self._extract_text(transcription)
+        if not text:
+            logger.warning(
+                f"Groq ASR returned an empty transcript (type={type(transcription).__name__})"
+            )
+        return {"transcript": text, "confidence": 1.0 if text else 0.0, "language": "en"}
+
+    @staticmethod
+    def _extract_text(transcription) -> str:
+        """Coerce Groq SDK responses into a plain transcript string."""
+        if transcription is None:
+            return ""
+        if isinstance(transcription, str):
+            return transcription.strip()
+        if isinstance(transcription, (int, float, bool)):
+            return str(transcription).strip()
+        if isinstance(transcription, dict):
+            for key in ("text", "transcript", "content", "message"):
+                value = transcription.get(key)
+                if value is None:
+                    continue
+                if isinstance(value, str):
+                    return value.strip()
+                return str(value).strip()
+            return str(transcription).strip()
+
+        for attr in ("text", "transcript", "content"):
+            value = getattr(transcription, attr, None)
+            if value is None:
+                continue
+            if isinstance(value, str):
+                return value.strip()
+            return str(value).strip()
+
+        if hasattr(transcription, "model_dump"):
+            try:
+                data = transcription.model_dump()
+                return GroqWhisperBackend._extract_text(data)
+            except Exception:
+                pass
+
+        return str(transcription).strip()
