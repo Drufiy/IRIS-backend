@@ -1,4 +1,4 @@
-"""Task-aware routing across DeepSeek language models."""
+"""Task-aware routing across AgentRouter-backed language models."""
 
 from __future__ import annotations
 
@@ -9,22 +9,22 @@ from llm.providers.base import BaseLLMProvider
 from llm.providers.deepseek_provider import DeepSeekProvider
 
 TASK_MODEL_MAP = {
-    "plan": "deepseek-v4-flash",
-    "chat": "deepseek-v4-flash",
+    "plan": "deepseek-v4-pro",
+    "chat": "deepseek-v4-pro",
     "code": "deepseek-v4-pro",
     "reason": "deepseek-v4-pro",
-    "local": "deepseek-v4-flash",
-    "memory": "deepseek-v4-flash",
+    "local": "deepseek-v4-pro",
+    "memory": "deepseek-v4-pro",
 }
 
 
 class LLMRouter:
-    """Selects a DeepSeek provider for each task."""
+    """Selects a provider-backed model for each task."""
 
     def __init__(self, config: dict, providers: dict[str, BaseLLMProvider] | None = None):
         self.config = config
         self.logger = logging.getLogger("iris.llm.router")
-        self.default = config.get("default_model", "deepseek-v4-flash")
+        self.default = config.get("default_model", "deepseek-v4-pro")
         self.task_routing = {**TASK_MODEL_MAP, **config.get("task_routing", {})}
         self.session_token_budget = int(config.get("session_token_budget", 0) or 0)
         self.enforce_budget = bool(config.get("enforce_token_budget", False))

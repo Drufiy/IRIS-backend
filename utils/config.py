@@ -31,7 +31,8 @@ def load_config(settings_path: str = "configs/settings.yaml") -> dict:
         llm_api_key = os.getenv("DEEPSEEK_API_KEY", "")
     config["llm"]["api_key"] = llm_api_key
     config["llm"]["deepseek_api_key"] = llm_api_key
-    config["llm"]["base_url"] = config["llm"].get("base_url", "https://api.deepseek.com")
+    default_llm_base_url = "https://api.anthropic.com/" if config["llm"].get("provider") == "agentrouter" else "https://api.deepseek.com"
+    config["llm"]["base_url"] = config["llm"].get("base_url", default_llm_base_url)
     config["voice"]["elevenlabs_api_key"] = os.getenv("ELEVENLABS_API_KEY", "")
     config["asr"]["groq_api_key"] = os.getenv("GROQ_API_KEY", "")
 

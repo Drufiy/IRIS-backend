@@ -1,15 +1,15 @@
 llm:
   provider: "agentrouter"
-  base_url: "https://agentrouter.org/v1"
+  base_url: "https://agentrouter.org/"
   api_key_env: "AGENT_ROUTER_TOKEN"
-  default_model: "deepseek-v4-flash"    # Default for general tasks
+  default_model: "deepseek-v4-pro"      # Default for general tasks
   task_routing:
-    plan:   "deepseek-v4-flash"
-    chat:   "deepseek-v4-flash"
+    plan:   "deepseek-v4-pro"
+    chat:   "deepseek-v4-pro"
     code:   "deepseek-v4-pro"
     reason: "deepseek-v4-pro"
-    local:  "deepseek-v4-flash"
-    memory: "deepseek-v4-flash"
+    local:  "deepseek-v4-pro"
+    memory: "deepseek-v4-pro"
 
 memory:
   chroma_path: "~/.iris/memory/chroma"
@@ -28,9 +28,9 @@ asr:
   model: "whisper-large-v3-turbo"
   groq_api_key: ""                  # Injected from $GROQ_API_KEY env var or keys.env
 voice:
-  elevenlabs_voice_name: "Selected Voice"       # Human-readable label for the selected voice
-  elevenlabs_voice_id: "f0JpDwzbGK384Dd1WH2s"   # User-selected voice
-  elevenlabs_model: "eleven_turbo_v2_5"
+  elevenlabs_voice_name: "Bella"                # Human-readable label for the selected voice
+  elevenlabs_voice_id: "hpp4J3VqNfWAUOO0d1Us"   # Pre-made female voice available via API
+  elevenlabs_model: "eleven_flash_v2_5"
   stream: true
 
 ui:
