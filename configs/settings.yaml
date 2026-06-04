@@ -28,8 +28,8 @@ asr:
   model: "whisper-large-v3-turbo"
   groq_api_key: ""                  # Injected from $GROQ_API_KEY env var or keys.env
 voice:
-  elevenlabs_voice_name: "Rachel"       # Human-readable label for the selected voice
-  elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM"   # Rachel (female, conversational)
+  elevenlabs_voice_name: "Selected Voice"       # Human-readable label for the selected voice
+  elevenlabs_voice_id: "f0JpDwzbGK384Dd1WH2s"   # User-selected voice
   elevenlabs_model: "eleven_flash_v2_5"
   stream: true
 
