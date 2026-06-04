@@ -2,14 +2,14 @@ llm:
   provider: "agentrouter"
   base_url: "https://agentrouter.org/v1"
   api_key_env: "AGENT_ROUTER_TOKEN"
-  default_model: "deepseek-v4-flash"    # Default for general tasks
+  default_model: "deepseek-v3.1"    # Default for general tasks
   task_routing:
-    plan:   "deepseek-v4-flash"
-    chat:   "deepseek-v4-flash"
-    code:   "deepseek-v4-pro"
-    reason: "deepseek-v4-pro"
-    local:  "deepseek-v4-flash"
-    memory: "deepseek-v4-flash"
+    plan:   "deepseek-v3.1"
+    chat:   "deepseek-v3.1"
+    code:   "deepseek-v3.1"
+    reason: "deepseek-v3.1"
+    local:  "deepseek-v3.1"
+    memory: "deepseek-v3.1"
 
 memory:
   chroma_path: "~/.iris/memory/chroma"
@@ -30,7 +30,7 @@ asr:
 voice:
   elevenlabs_voice_name: "Selected Voice"       # Human-readable label for the selected voice
   elevenlabs_voice_id: "f0JpDwzbGK384Dd1WH2s"   # User-selected voice
-  elevenlabs_model: "eleven_flash_v2_5"
+  elevenlabs_model: "eleven_turbo_v2_5"
   stream: true
 
 ui:

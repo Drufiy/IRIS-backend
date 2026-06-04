@@ -16,7 +16,7 @@ class TTSRouter:
         api_key  = config["elevenlabs_api_key"]
         voice_name = config.get("elevenlabs_voice_name", "Rachel")
         voice_id = config.get("elevenlabs_voice_id", "21m00Tcm4TlvDq8ikWAM")
-        model    = config.get("elevenlabs_model", "eleven_flash_v2_5")
+        model    = config.get("elevenlabs_model", "eleven_turbo_v2_5")
 
         self.voice_name = voice_name
         self._elevenlabs = ElevenLabsTTS(
