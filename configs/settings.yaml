@@ -1,7 +1,28 @@
 llm:
-  provider: "agentrouter"
-  base_url: "https://agentrouter.org/"
-  api_key_env: "AGENT_ROUTER_TOKEN"
+  # ── Provider selection ────────────────────────────────────────────────────
+  # Options:
+  #   "deepseek"     — Direct calls to api.deepseek.com (user's own DEEPSEEK_API_KEY)
+  #   "agentrouter"  — Direct calls to agentrouter.org (user's own AGENT_ROUTER_TOKEN)
+  #   "shared"       — Shared backend proxy (no user API key needed)
+  #   "custom"       — Any OpenAI-compatible endpoint
+  provider: "deepseek"
+
+  # For "shared" mode: URL of the shared backend proxy (e.g., deployed on Railway/Render)
+  shared_backend_url: "http://localhost:8000"
+
+  # For "shared" mode: optional auth token for the shared backend
+  shared_backend_key: ""
+
+  # For "agentrouter" or "custom" mode: base URL of the API
+  base_url: "https://api.deepseek.com"
+
+  # Environment variable name to read the API key from
+  api_key_env: "DEEPSEEK_API_KEY"
+
+  # Fallback: DeepSeek API key (read from DEEPSEEK_API_KEY env var or keys.env)
+  # In shared mode, this is NOT needed — the server holds the key
+  deepseek_api_key: ""
+
   default_model: "deepseek-v4-pro"      # Default for general tasks
   task_routing:
     plan:   "deepseek-v4-pro"

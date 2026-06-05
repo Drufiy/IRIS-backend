@@ -1,6 +1,1696 @@
 {
-  "entries": [],
+  "entries": [
+    {
+      "id": "4f00bffc-0d70-4def-9ad2-0503160376ba",
+      "role": "user",
+      "content": "...",
+      "tags": [],
+      "timestamp": "2026-06-03T09:23:45.319710+00:00"
+    },
+    {
+      "id": "42598e59-79b1-4450-a11c-1b33212cdda1",
+      "role": "iris",
+      "content": "Client error '401 Unauthorized' for url 'https://api.deepseek.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "tags": [],
+      "timestamp": "2026-06-03T09:23:45.322761+00:00"
+    },
+    {
+      "id": "f7e69597-a897-4243-bd96-ff889de09dfb",
+      "role": "user",
+      "content": ".",
+      "tags": [],
+      "timestamp": "2026-06-03T17:28:26.542071+00:00"
+    },
+    {
+      "id": "0b192e12-7cdd-4546-ab44-632341ff2aa6",
+      "role": "iris",
+      "content": "Client error '401 Unauthorized' for url 'https://api.deepseek.com/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "tags": [],
+      "timestamp": "2026-06-03T17:28:26.544470+00:00"
+    },
+    {
+      "id": "dcb93619-a8f4-4ac1-8f89-7f7d44c67c20",
+      "role": "user",
+      "content": "I",
+      "tags": [],
+      "timestamp": "2026-06-03T17:29:18.684761+00:00"
+    },
+    {
+      "id": "8d20edbd-40cd-4300-8760-6d99c3be0a1d",
+      "role": "iris",
+      "content": "Client error '401 Unauthorized' for url 'https://api.deepseek.com/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "tags": [],
+      "timestamp": "2026-06-03T17:29:18.686084+00:00"
+    },
+    {
+      "id": "0328b2b4-6481-489e-bffb-2dbeb0a77d98",
+      "role": "user",
+      "content": "I will add the goldini Iris",
+      "tags": [],
+      "timestamp": "2026-06-03T18:15:20.716172+00:00"
+    },
+    {
+      "id": "6e905e52-eb31-409e-aa28-3f054b331aeb",
+      "role": "iris",
+      "content": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "tags": [],
+      "timestamp": "2026-06-03T18:15:20.718495+00:00"
+    },
+    {
+      "id": "a5471ced-2b1f-48d3-a029-33617e64ee77",
+      "role": "user",
+      "content": "Iris what is the time right now?",
+      "tags": [],
+      "timestamp": "2026-06-03T18:15:36.166047+00:00"
+    },
+    {
+      "id": "72a70eb0-d438-4254-88d8-b5c14aaf33f2",
+      "role": "iris",
+      "content": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "tags": [],
+      "timestamp": "2026-06-03T18:15:36.167609+00:00"
+    },
+    {
+      "id": "2a3efcaf-c005-4c4d-9081-629c9a04d8ff",
+      "role": "user",
+      "content": "What is the time right now?",
+      "tags": [],
+      "timestamp": "2026-06-03T18:18:12.562297+00:00"
+    },
+    {
+      "id": "75a89110-dbef-4fd3-bb52-63f2bed8d166",
+      "role": "iris",
+      "content": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "tags": [],
+      "timestamp": "2026-06-03T18:18:12.564071+00:00"
+    },
+    {
+      "id": "93b98438-1b60-4151-9940-1ec3e30aac8f",
+      "role": "user",
+      "content": "Thank you.",
+      "tags": [],
+      "timestamp": "2026-06-03T18:26:07.113734+00:00"
+    },
+    {
+      "id": "96d80df6-93e7-4593-b5cc-ad63c06da7e5",
+      "role": "iris",
+      "content": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "tags": [],
+      "timestamp": "2026-06-03T18:26:07.116132+00:00"
+    },
+    {
+      "id": "46541f07-cc25-413a-9bbf-2b87498330a6",
+      "role": "user",
+      "content": "Thank you.",
+      "tags": [],
+      "timestamp": "2026-06-03T18:32:10.008589+00:00"
+    },
+    {
+      "id": "1698cbce-22bf-4fb9-be37-779a1a008caa",
+      "role": "iris",
+      "content": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "tags": [],
+      "timestamp": "2026-06-03T18:32:10.010496+00:00"
+    },
+    {
+      "id": "3a283e8a-e233-41f1-95ba-d5eee3733169",
+      "role": "user",
+      "content": "What time is it?",
+      "tags": [],
+      "timestamp": "2026-06-04T06:03:26.765271+00:00"
+    },
+    {
+      "id": "c1cf2a1a-934a-44cb-95fb-da2cc9c3dd3f",
+      "role": "iris",
+      "content": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "tags": [],
+      "timestamp": "2026-06-04T06:03:26.768430+00:00"
+    },
+    {
+      "id": "86de721d-3be9-4282-8757-4d2e3867992a",
+      "role": "user",
+      "content": "What time is it?",
+      "tags": [],
+      "timestamp": "2026-06-04T08:52:10.238880+00:00"
+    },
+    {
+      "id": "ab8004bb-103a-432c-93bb-0984e8c26759",
+      "role": "iris",
+      "content": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "tags": [],
+      "timestamp": "2026-06-04T08:52:10.242035+00:00"
+    },
+    {
+      "id": "425bac00-d1e7-4957-b7a5-217e8fda7ca5",
+      "role": "user",
+      "content": "Iris what time is it?",
+      "tags": [],
+      "timestamp": "2026-06-04T10:36:20.977370+00:00"
+    },
+    {
+      "id": "469d0d1f-7629-4b86-9474-cd87de631dd8",
+      "role": "iris",
+      "content": "It is 4:06 PM.",
+      "tags": [],
+      "timestamp": "2026-06-04T10:36:20.979527+00:00"
+    },
+    {
+      "id": "b10594d7-b42d-4849-9196-15c0f77be08b",
+      "role": "user",
+      "content": "What time is it?",
+      "tags": [],
+      "timestamp": "2026-06-04T10:37:22.051110+00:00"
+    },
+    {
+      "id": "13532183-feb1-429b-84eb-80f9d0338c76",
+      "role": "iris",
+      "content": "It is 4:07 PM.",
+      "tags": [],
+      "timestamp": "2026-06-04T10:37:22.052975+00:00"
+    },
+    {
+      "id": "0e6b08ec-9c76-4add-9d44-38c75e0cbecf",
+      "role": "user",
+      "content": "Open Notes app",
+      "tags": [],
+      "timestamp": "2026-06-04T10:37:37.709114+00:00"
+    },
+    {
+      "id": "6a74e09f-b354-4be1-a817-3f2543601216",
+      "role": "iris",
+      "content": "[1] Unable to find application named 'Notes App'",
+      "tags": [],
+      "timestamp": "2026-06-04T10:37:37.709986+00:00"
+    },
+    {
+      "id": "8c74572f-43fe-4bab-bf19-b557cd486abc",
+      "role": "user",
+      "content": "Open Safari",
+      "tags": [],
+      "timestamp": "2026-06-04T10:37:59.694183+00:00"
+    },
+    {
+      "id": "14a8ecd8-a248-4fc1-b620-b0ca2acf305c",
+      "role": "iris",
+      "content": "[1] Opened Safari",
+      "tags": [],
+      "timestamp": "2026-06-04T10:37:59.695396+00:00"
+    },
+    {
+      "id": "126f927d-d3af-4021-88d9-cfc04b6d43b5",
+      "role": "user",
+      "content": "Open WhatsApp",
+      "tags": [],
+      "timestamp": "2026-06-04T10:38:24.182256+00:00"
+    },
+    {
+      "id": "53b4211e-47c1-4235-83b1-eeddd080e416",
+      "role": "iris",
+      "content": "[1] Opened Whatsapp",
+      "tags": [],
+      "timestamp": "2026-06-04T10:38:24.184794+00:00"
+    },
+    {
+      "id": "dc5a0d64-6645-42b9-a3a8-e331b69cb972",
+      "role": "user",
+      "content": "Open WhatsApp",
+      "tags": [],
+      "timestamp": "2026-06-04T10:39:56.688805+00:00"
+    },
+    {
+      "id": "b22ecbf6-e4ca-4b06-91f0-0a7dd4270a4d",
+      "role": "iris",
+      "content": "[1] Opened Whatsapp",
+      "tags": [],
+      "timestamp": "2026-06-04T10:39:56.691718+00:00"
+    },
+    {
+      "id": "f95b6568-0b8a-4846-93c3-c2dafc16e886",
+      "role": "user",
+      "content": "send a message to Aryan",
+      "tags": [],
+      "timestamp": "2026-06-04T10:40:23.086218+00:00"
+    },
+    {
+      "id": "81eaefb7-b251-4c7a-8db8-978b4131d90d",
+      "role": "iris",
+      "content": "Could you rephrase that a bit more specifically?",
+      "tags": [],
+      "timestamp": "2026-06-04T10:40:23.088375+00:00"
+    },
+    {
+      "id": "c2503d32-d51f-4fe1-b7ef-b19b7b7539cc",
+      "role": "user",
+      "content": "Open YouTube on a new window on",
+      "tags": [],
+      "timestamp": "2026-06-04T10:40:59.885700+00:00"
+    },
+    {
+      "id": "e3a6ec5e-910e-4eef-ac87-c114c22c5a2a",
+      "role": "iris",
+      "content": "[1] Unable to find application named 'Youtube On A New Window On'",
+      "tags": [],
+      "timestamp": "2026-06-04T10:40:59.886762+00:00"
+    },
+    {
+      "id": "cfa087e0-6438-44f2-99e5-031f1cbb8289",
+      "role": "user",
+      "content": "Open YouTube and Safari",
+      "tags": [],
+      "timestamp": "2026-06-04T10:41:18.980866+00:00"
+    },
+    {
+      "id": "aabb8658-ebb3-485f-8a4f-db41e947a7d9",
+      "role": "iris",
+      "content": "[1] Unable to find application named 'Youtube And Safari'",
+      "tags": [],
+      "timestamp": "2026-06-04T10:41:18.982021+00:00"
+    },
+    {
+      "id": "3326ec4a-8e91-4649-a0b8-476d30f4b407",
+      "role": "user",
+      "content": "Iris What time is it?",
+      "tags": [],
+      "timestamp": "2026-06-05T10:45:14.607558+00:00"
+    },
+    {
+      "id": "f474acb8-70bf-4d7b-a178-15acf150d347",
+      "role": "iris",
+      "content": "It is 4:15 PM.",
+      "tags": [],
+      "timestamp": "2026-06-05T10:45:14.610720+00:00"
+    },
+    {
+      "id": "891eb282-1671-4673-aa94-65370bd0f92f",
+      "role": "user",
+      "content": "Open WhatsApp",
+      "tags": [],
+      "timestamp": "2026-06-05T10:46:33.562068+00:00"
+    },
+    {
+      "id": "e9cb490e-119b-4b50-b646-188c0c6126f6",
+      "role": "iris",
+      "content": "[1] Opened Whatsapp",
+      "tags": [],
+      "timestamp": "2026-06-05T10:46:33.563425+00:00"
+    },
+    {
+      "id": "f31bf3ee-fd5d-4fa9-a1e4-a4c1a0e931bf",
+      "role": "user",
+      "content": "what time is it",
+      "tags": [],
+      "timestamp": "2026-06-05T10:58:16.895805+00:00"
+    },
+    {
+      "id": "52ad494a-9c4c-4950-b35f-e815be985699",
+      "role": "iris",
+      "content": "It is 4:28 PM.",
+      "tags": [],
+      "timestamp": "2026-06-05T10:58:16.899806+00:00"
+    },
+    {
+      "id": "e7bf1ec5-2c7f-4551-bdbc-749adecb8bb4",
+      "role": "user",
+      "content": "Open WhatsApp",
+      "tags": [],
+      "timestamp": "2026-06-05T10:59:32.905616+00:00"
+    },
+    {
+      "id": "0249996a-50fc-44bc-8d5a-c359c8c30d43",
+      "role": "iris",
+      "content": "[1] Opened Whatsapp",
+      "tags": [],
+      "timestamp": "2026-06-05T10:59:32.907091+00:00"
+    },
+    {
+      "id": "bccceab9-bfd6-4bb9-a023-bb4847a5cbba",
+      "role": "user",
+      "content": "What is 18 plus 56?",
+      "tags": [],
+      "timestamp": "2026-06-05T11:00:48.169648+00:00"
+    },
+    {
+      "id": "b2e7a490-63b3-48e2-812f-96363ce2b7af",
+      "role": "iris",
+      "content": "Could you rephrase that a bit more specifically?",
+      "tags": [],
+      "timestamp": "2026-06-05T11:00:48.172220+00:00"
+    },
+    {
+      "id": "ba6ac1ff-bfcf-4207-858f-1333e4896562",
+      "role": "user",
+      "content": "What is the square root of 64?",
+      "tags": [],
+      "timestamp": "2026-06-05T11:02:05.385661+00:00"
+    },
+    {
+      "id": "b16c8fa3-ba4e-4f1b-a4f3-8a978ac2ac83",
+      "role": "iris",
+      "content": "Could you rephrase that a bit more specifically?",
+      "tags": [],
+      "timestamp": "2026-06-05T11:02:05.388441+00:00"
+    }
+  ],
   "habits": [],
-  "interactions": [],
-  "reflections": []
+  "interactions": [
+    {
+      "id": "9b051b0f-c3b3-4456-ae38-be76f3f521cd",
+      "timestamp": "2026-06-03T09:23:47.800568+00:00",
+      "user_input": "...",
+      "response": "Client error '401 Unauthorized' for url 'https://api.deepseek.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "status": "success",
+      "latency_seconds": 48.517,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 0.339,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 0.339,
+        "tts_seconds": 2.475,
+        "total_seconds": 48.517
+      }
+    },
+    {
+      "id": "68182514-cae9-47a7-a915-ab562e200fc0",
+      "timestamp": "2026-06-03T17:28:27.578752+00:00",
+      "user_input": ".",
+      "response": "Client error '401 Unauthorized' for url 'https://api.deepseek.com/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "status": "success",
+      "latency_seconds": 55.378,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 0.278,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 0.279,
+        "tts_seconds": 1.03,
+        "total_seconds": 55.378
+      }
+    },
+    {
+      "id": "9efef038-a991-46aa-9e64-c141ae520f63",
+      "timestamp": "2026-06-03T17:29:18.933997+00:00",
+      "user_input": "I",
+      "response": "Client error '401 Unauthorized' for url 'https://api.deepseek.com/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "status": "success",
+      "latency_seconds": 0.49,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 0.239,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 0.24,
+        "tts_seconds": 0.245,
+        "total_seconds": 0.49
+      }
+    },
+    {
+      "id": "11f9a683-6bed-4e45-a932-05735ff76ca6",
+      "timestamp": "2026-06-03T18:15:21.608431+00:00",
+      "user_input": "I will add the goldini Iris",
+      "response": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "status": "success",
+      "latency_seconds": 14.198,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 0.77,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 0.77,
+        "tts_seconds": 0.887,
+        "total_seconds": 14.198
+      }
+    },
+    {
+      "id": "9fe11fd1-de46-4ced-be37-811dd469b945",
+      "timestamp": "2026-06-03T18:15:36.386149+00:00",
+      "user_input": "Iris what is the time right now?",
+      "response": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "status": "success",
+      "latency_seconds": 0.583,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 0.362,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 0.362,
+        "tts_seconds": 0.216,
+        "total_seconds": 0.583
+      }
+    },
+    {
+      "id": "b44c9483-7910-4d05-82d1-065a4d840984",
+      "timestamp": "2026-06-03T18:18:12.802796+00:00",
+      "user_input": "What is the time right now?",
+      "response": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "status": "success",
+      "latency_seconds": 0.549,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 0.307,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 0.307,
+        "tts_seconds": 0.236,
+        "total_seconds": 0.549
+      }
+    },
+    {
+      "id": "30fd920a-3b33-46dd-a8c5-373c4af857f3",
+      "timestamp": "2026-06-03T18:26:07.590367+00:00",
+      "user_input": "Thank you.",
+      "response": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "status": "success",
+      "latency_seconds": 0.804,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 0.325,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 0.326,
+        "tts_seconds": 0.471,
+        "total_seconds": 0.804
+      }
+    },
+    {
+      "id": "fffc9e6e-fe06-4569-9cf2-27cb66021737",
+      "timestamp": "2026-06-03T18:32:10.227860+00:00",
+      "user_input": "Thank you.",
+      "response": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "status": "success",
+      "latency_seconds": 0.551,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 0.299,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 0.299,
+        "tts_seconds": 0.215,
+        "total_seconds": 0.551
+      }
+    },
+    {
+      "id": "f9d50285-88cc-4e18-9099-3453314ac24c",
+      "timestamp": "2026-06-04T06:03:28.374760+00:00",
+      "user_input": "What time is it?",
+      "response": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "status": "success",
+      "latency_seconds": 16.074,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 0.493,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 0.494,
+        "tts_seconds": 1.603,
+        "total_seconds": 16.074
+      }
+    },
+    {
+      "id": "e16ef860-d878-4b21-b9a7-d439eb778b1c",
+      "timestamp": "2026-06-04T08:52:11.382053+00:00",
+      "user_input": "What time is it?",
+      "response": "Client error '401 Unauthorized' for url 'https://agentrouter.org/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401",
+      "status": "success",
+      "latency_seconds": 12.593,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 0.34,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 0.34,
+        "tts_seconds": 1.137,
+        "total_seconds": 12.593
+      }
+    },
+    {
+      "id": "4072f8e0-e9a4-4a8b-9c85-6a62c211130c",
+      "timestamp": "2026-06-04T10:36:23.941410+00:00",
+      "user_input": "Iris what time is it?",
+      "response": "It is 4:06 PM.",
+      "status": "success",
+      "latency_seconds": 20.8,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 6.907,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 6.907,
+        "tts_seconds": 2.959,
+        "total_seconds": 20.8
+      }
+    },
+    {
+      "id": "a2a864db-30f3-4914-95da-6fe50202f63a",
+      "timestamp": "2026-06-04T10:37:22.458760+00:00",
+      "user_input": "What time is it?",
+      "response": "It is 4:07 PM.",
+      "status": "success",
+      "latency_seconds": 6.365,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 5.955,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 5.955,
+        "tts_seconds": 0.403,
+        "total_seconds": 6.365
+      }
+    },
+    {
+      "id": "24d9af5c-dbfe-4e10-afc7-e74ff9ceb6b1",
+      "timestamp": "2026-06-04T10:37:38.142281+00:00",
+      "user_input": "Open Notes app",
+      "response": "[1] Unable to find application named 'Notes App'",
+      "status": "success",
+      "latency_seconds": 5.541,
+      "action_summary": "open_app:ok",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 5.064,
+        "execution_seconds": 0.044,
+        "agent_total_seconds": 5.107,
+        "tts_seconds": 0.429,
+        "total_seconds": 5.541
+      }
+    },
+    {
+      "id": "80390ddb-3729-4e96-8a4a-99d75ec6d443",
+      "timestamp": "2026-06-04T10:38:00.040632+00:00",
+      "user_input": "Open Safari",
+      "response": "[1] Opened Safari",
+      "status": "success",
+      "latency_seconds": 5.759,
+      "action_summary": "open_app:ok",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 5.325,
+        "execution_seconds": 0.086,
+        "agent_total_seconds": 5.411,
+        "tts_seconds": 0.342,
+        "total_seconds": 5.759
+      }
+    },
+    {
+      "id": "3e442a3b-2af8-4272-9555-9ae6c862d372",
+      "timestamp": "2026-06-04T10:38:24.525722+00:00",
+      "user_input": "Open WhatsApp",
+      "response": "[1] Opened Whatsapp",
+      "status": "success",
+      "latency_seconds": 5.341,
+      "action_summary": "open_app:ok",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 4.512,
+        "execution_seconds": 0.484,
+        "agent_total_seconds": 4.996,
+        "tts_seconds": 0.337,
+        "total_seconds": 5.341
+      }
+    },
+    {
+      "id": "e41db7b9-848b-4a76-b44b-13c4944192e4",
+      "timestamp": "2026-06-04T10:39:57.031659+00:00",
+      "user_input": "Open WhatsApp",
+      "response": "[1] Opened Whatsapp",
+      "status": "success",
+      "latency_seconds": 4.325,
+      "action_summary": "open_app:ok",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 3.758,
+        "execution_seconds": 0.222,
+        "agent_total_seconds": 3.98,
+        "tts_seconds": 0.337,
+        "total_seconds": 4.325
+      }
+    },
+    {
+      "id": "f55b7ef4-6dd3-4fc2-944d-e87b0ad664a9",
+      "timestamp": "2026-06-04T10:40:23.507325+00:00",
+      "user_input": "send a message to Aryan",
+      "response": "Could you rephrase that a bit more specifically?",
+      "status": "success",
+      "latency_seconds": 7.329,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 6.906,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 6.906,
+        "tts_seconds": 0.416,
+        "total_seconds": 7.329
+      }
+    },
+    {
+      "id": "e365f1a8-ceeb-426a-8777-92bc77c92e6c",
+      "timestamp": "2026-06-04T10:41:00.344706+00:00",
+      "user_input": "Open YouTube on a new window on",
+      "response": "[1] Unable to find application named 'Youtube On A New Window On'",
+      "status": "success",
+      "latency_seconds": 5.673,
+      "action_summary": "open_app:ok",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 5.172,
+        "execution_seconds": 0.041,
+        "agent_total_seconds": 5.212,
+        "tts_seconds": 0.455,
+        "total_seconds": 5.673
+      }
+    },
+    {
+      "id": "a517e855-6e40-4a50-8df9-c083c0dc020a",
+      "timestamp": "2026-06-04T10:41:19.431957+00:00",
+      "user_input": "Open YouTube and Safari",
+      "response": "[1] Unable to find application named 'Youtube And Safari'",
+      "status": "success",
+      "latency_seconds": 5.923,
+      "action_summary": "open_app:ok",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 5.429,
+        "execution_seconds": 0.041,
+        "agent_total_seconds": 5.471,
+        "tts_seconds": 0.446,
+        "total_seconds": 5.923
+      }
+    },
+    {
+      "id": "b7f4dd95-d311-4a08-8a80-090cb0936171",
+      "timestamp": "2026-06-05T10:45:17.168015+00:00",
+      "user_input": "Iris What time is it?",
+      "response": "It is 4:15 PM.",
+      "status": "success",
+      "latency_seconds": 76.379,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 60.057,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 60.057,
+        "tts_seconds": 2.554,
+        "total_seconds": 76.379
+      }
+    },
+    {
+      "id": "8a38c768-c9a4-47b5-89ad-67aeee059e40",
+      "timestamp": "2026-06-05T10:46:33.919506+00:00",
+      "user_input": "Open WhatsApp",
+      "response": "[1] Opened Whatsapp",
+      "status": "success",
+      "latency_seconds": 60.509,
+      "action_summary": "open_app:ok",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 60.053,
+        "execution_seconds": 0.096,
+        "agent_total_seconds": 60.149,
+        "tts_seconds": 0.353,
+        "total_seconds": 60.509
+      }
+    },
+    {
+      "id": "955a7c4c-8601-4e9e-8d3c-75c0bce2a30e",
+      "timestamp": "2026-06-05T10:58:19.558531+00:00",
+      "user_input": "what time is it",
+      "response": "It is 4:28 PM.",
+      "status": "success",
+      "latency_seconds": 77.064,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 60.037,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 60.037,
+        "tts_seconds": 2.652,
+        "total_seconds": 77.064
+      }
+    },
+    {
+      "id": "13477163-1e89-4e42-acb0-c769625c0214",
+      "timestamp": "2026-06-05T10:59:34.942789+00:00",
+      "user_input": "Open WhatsApp",
+      "response": "[1] Opened Whatsapp",
+      "status": "success",
+      "latency_seconds": 62.184,
+      "action_summary": "open_app:ok",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 60.056,
+        "execution_seconds": 0.09,
+        "agent_total_seconds": 60.147,
+        "tts_seconds": 2.031,
+        "total_seconds": 62.184
+      }
+    },
+    {
+      "id": "db9e343e-1898-468e-b30e-3ca19e4186e1",
+      "timestamp": "2026-06-05T11:00:58.138410+00:00",
+      "user_input": "What is 18 plus 56?",
+      "response": "Could you rephrase that a bit more specifically?",
+      "status": "success",
+      "latency_seconds": 70.022,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 60.051,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 60.051,
+        "tts_seconds": 9.961,
+        "total_seconds": 70.022
+      }
+    },
+    {
+      "id": "a4bd453b-47f0-4800-aad9-df91b7571afc",
+      "timestamp": "2026-06-05T11:02:08.455784+00:00",
+      "user_input": "What is the square root of 64?",
+      "response": "Could you rephrase that a bit more specifically?",
+      "status": "success",
+      "latency_seconds": 63.121,
+      "action_summary": "planner:clarify",
+      "error_message": "",
+      "satisfaction": "unknown",
+      "timing_breakdown": {
+        "planning_seconds": 60.051,
+        "execution_seconds": 0.0,
+        "agent_total_seconds": 60.051,
+        "tts_seconds": 3.061,
+        "total_seconds": 63.121
+      }
+    }
+  ],
+  "reflections": [
+    {
+      "id": "f14abdc1-a40d-487b-a080-5bbaa3c079e7",
+      "interaction_id": "9b051b0f-c3b3-4456-ae38-be76f3f521cd",
+      "timestamp": "2026-06-03T09:23:47.804052+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: tts seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "keep_response_brief",
+          "reason": "Speech playback took a while before, so keep spoken responses concise when possible."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "2dcd1aa1-1a9d-4c89-9198-f82015e5834a",
+      "interaction_id": "68182514-cae9-47a7-a915-ab562e200fc0",
+      "timestamp": "2026-06-03T17:28:27.580318+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: tts seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "95e3c2c3-448b-4151-b44f-775259d37960",
+      "interaction_id": "9efef038-a991-46aa-9e64-c141ae520f63",
+      "timestamp": "2026-06-03T17:29:18.935270+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Slowest stage recently: tts seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner"
+      ],
+      "hints": [
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "4275a2e9-e337-4d3e-b465-289136e7ae88",
+      "interaction_id": "11f9a683-6bed-4e45-a932-05735ff76ca6",
+      "timestamp": "2026-06-03T18:15:21.609676+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: tts seconds.",
+      "domain": "general",
+      "keywords": [
+        "add",
+        "clarify",
+        "goldini",
+        "iris",
+        "planner",
+        "will"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "62252db5-cfd4-4ebc-9b1e-e40603c7f617",
+      "interaction_id": "9fe11fd1-de46-4ced-be37-811dd469b945",
+      "timestamp": "2026-06-03T18:15:36.387813+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Slowest stage recently: planning seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "iris",
+        "now",
+        "planner",
+        "right",
+        "time",
+        "what"
+      ],
+      "hints": [
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "3b522799-43be-401f-b6d9-66a7cf938b82",
+      "interaction_id": "b44c9483-7910-4d05-82d1-065a4d840984",
+      "timestamp": "2026-06-03T18:18:12.803845+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Slowest stage recently: planning seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "now",
+        "planner",
+        "right",
+        "time",
+        "what"
+      ],
+      "hints": [
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "a08af001-9d67-41f8-9fb4-013d587a7cfc",
+      "interaction_id": "30fd920a-3b33-46dd-a8c5-373c4af857f3",
+      "timestamp": "2026-06-03T18:26:07.592175+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Slowest stage recently: tts seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner",
+        "thank"
+      ],
+      "hints": [
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "c6baad9b-2f0a-4fbc-a346-62a9d8e90102",
+      "interaction_id": "fffc9e6e-fe06-4569-9cf2-27cb66021737",
+      "timestamp": "2026-06-03T18:32:10.229163+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Slowest stage recently: planning seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner",
+        "thank"
+      ],
+      "hints": [
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "f7b491f6-3681-4701-87c1-a81a553cb409",
+      "interaction_id": "f9d50285-88cc-4e18-9099-3453314ac24c",
+      "timestamp": "2026-06-04T06:03:28.376678+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: tts seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner",
+        "time",
+        "what"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "8d1807f5-9dd4-4cf7-a54f-23a101a4cf96",
+      "interaction_id": "e16ef860-d878-4b21-b9a7-d439eb778b1c",
+      "timestamp": "2026-06-04T08:52:11.383778+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: tts seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner",
+        "time",
+        "what"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "5b89dc83-e394-45ba-b212-6bc352f6dba8",
+      "interaction_id": "4072f8e0-e9a4-4a8b-9c85-6a62c211130c",
+      "timestamp": "2026-06-04T10:36:23.942569+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: planning seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "iris",
+        "planner",
+        "time",
+        "what"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "performance",
+          "value": "keep_response_brief",
+          "reason": "Speech playback took a while before, so keep spoken responses concise when possible."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "1d522151-14b4-4845-bc6c-82667adb795f",
+      "interaction_id": "a2a864db-30f3-4914-95da-6fe50202f63a",
+      "timestamp": "2026-06-04T10:37:22.460263+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: planning seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner",
+        "time",
+        "what"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "5ed05417-2805-4b20-b501-06a717755a8c",
+      "interaction_id": "24d9af5c-dbfe-4e10-afc7-e74ff9ceb6b1",
+      "timestamp": "2026-06-04T10:37:38.144181+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: agent total seconds.",
+      "domain": "general",
+      "keywords": [
+        "app",
+        "notes",
+        "open",
+        "open_app"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "37e86786-739c-47bd-8f90-31d0d6051f5d",
+      "interaction_id": "80390ddb-3729-4e96-8a4a-99d75ec6d443",
+      "timestamp": "2026-06-04T10:38:00.042773+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: agent total seconds.",
+      "domain": "general",
+      "keywords": [
+        "open",
+        "open_app",
+        "safari"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "2d15052f-c2f4-4e8f-9ccb-f859082ef6dd",
+      "interaction_id": "3e442a3b-2af8-4272-9555-9ae6c862d372",
+      "timestamp": "2026-06-04T10:38:24.527357+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: agent total seconds.",
+      "domain": "general",
+      "keywords": [
+        "open",
+        "open_app",
+        "whatsapp"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "e6060af6-a018-445f-a453-837e85b5f44b",
+      "interaction_id": "e41db7b9-848b-4a76-b44b-13c4944192e4",
+      "timestamp": "2026-06-04T10:39:57.033062+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Slowest stage recently: agent total seconds.",
+      "domain": "general",
+      "keywords": [
+        "open",
+        "open_app",
+        "whatsapp"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "e504fa02-abeb-4750-8c3e-dc8b5d46684a",
+      "interaction_id": "f55b7ef4-6dd3-4fc2-944d-e87b0ad664a9",
+      "timestamp": "2026-06-04T10:40:23.508907+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: planning seconds.",
+      "domain": "general",
+      "keywords": [
+        "aryan",
+        "clarify",
+        "message",
+        "planner",
+        "send"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "81caf299-b2f7-46a3-a42f-01546fbab5e5",
+      "interaction_id": "e365f1a8-ceeb-426a-8777-92bc77c92e6c",
+      "timestamp": "2026-06-04T10:41:00.346735+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: agent total seconds.",
+      "domain": "general",
+      "keywords": [
+        "new",
+        "open",
+        "open_app",
+        "window",
+        "youtube"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "b2410706-2bae-40e7-bfc0-a4a159ce9134",
+      "interaction_id": "a517e855-6e40-4a50-8df9-c083c0dc020a",
+      "timestamp": "2026-06-04T10:41:19.433968+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: agent total seconds.",
+      "domain": "general",
+      "keywords": [
+        "open",
+        "open_app",
+        "safari",
+        "youtube"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "0dfb3f2d-5128-4fa1-8e16-cbe02e4e61d6",
+      "interaction_id": "b7f4dd95-d311-4a08-8a80-090cb0936171",
+      "timestamp": "2026-06-05T10:45:17.169333+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: planning seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "iris",
+        "planner",
+        "time",
+        "what"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "performance",
+          "value": "keep_response_brief",
+          "reason": "Speech playback took a while before, so keep spoken responses concise when possible."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "2976ab02-b417-48f2-8cfc-34c22759bad9",
+      "interaction_id": "8a38c768-c9a4-47b5-89ad-67aeee059e40",
+      "timestamp": "2026-06-05T10:46:33.921180+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: agent total seconds.",
+      "domain": "general",
+      "keywords": [
+        "open",
+        "open_app",
+        "whatsapp"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "bd464a43-758a-4bed-be2c-864e27a2c114",
+      "interaction_id": "955a7c4c-8601-4e9e-8d3c-75c0bce2a30e",
+      "timestamp": "2026-06-05T10:58:19.561197+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: planning seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner",
+        "time",
+        "what"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "performance",
+          "value": "keep_response_brief",
+          "reason": "Speech playback took a while before, so keep spoken responses concise when possible."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "92778777-ba34-486d-bda8-4f1887844669",
+      "interaction_id": "13477163-1e89-4e42-acb0-c769625c0214",
+      "timestamp": "2026-06-05T10:59:34.946793+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: agent total seconds.",
+      "domain": "general",
+      "keywords": [
+        "open",
+        "open_app",
+        "whatsapp"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "performance",
+          "value": "keep_response_brief",
+          "reason": "Speech playback took a while before, so keep spoken responses concise when possible."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "e4eed144-60b6-4d9f-92e1-64e064690275",
+      "interaction_id": "db9e343e-1898-468e-b30e-3ca19e4186e1",
+      "timestamp": "2026-06-05T11:00:58.140585+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: planning seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner",
+        "plus",
+        "what"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "performance",
+          "value": "keep_response_brief",
+          "reason": "Speech playback took a while before, so keep spoken responses concise when possible."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    },
+    {
+      "id": "e4eb4a7e-b844-4c01-b832-0fca358640f5",
+      "interaction_id": "a4bd453b-47f0-4800-aad9-df91b7571afc",
+      "timestamp": "2026-06-05T11:02:08.459133+00:00",
+      "classification": "success",
+      "lesson": "Successful pattern: reuse this approach for similar requests. Response was slow; prefer fewer steps and lower-latency paths. Slowest stage recently: planning seconds.",
+      "domain": "general",
+      "keywords": [
+        "clarify",
+        "planner",
+        "root",
+        "square",
+        "what"
+      ],
+      "hints": [
+        {
+          "type": "performance",
+          "value": "prefer_lower_latency_path",
+          "reason": "A similar task was slow, so keep the next attempt shorter and more direct."
+        },
+        {
+          "type": "performance",
+          "value": "simplify_planning_context",
+          "reason": "Planning was slow before, so reduce extra prompt context and avoid unnecessary subtasks."
+        },
+        {
+          "type": "performance",
+          "value": "keep_response_brief",
+          "reason": "Speech playback took a while before, so keep spoken responses concise when possible."
+        },
+        {
+          "type": "pattern",
+          "value": "reuse_successful_approach",
+          "reason": "A similar task completed successfully before."
+        }
+      ],
+      "source_status": "success"
+    }
+  ],
+  "improvement_proposals": [
+    {
+      "id": "f0147d65-94d2-41ef-b324-c359e56aa9f8",
+      "created_at": "2026-06-03T09:23:47.805136+00:00",
+      "status": "pending",
+      "proposal_type": "performance_tuning",
+      "domain": "general",
+      "source_interaction_id": "9b051b0f-c3b3-4456-ae38-be76f3f521cd",
+      "trigger": "slow_task",
+      "priority": "medium",
+      "approval_policy": {
+        "mode": "manual",
+        "requires_human_approval": true,
+        "reason": "This proposal should be reviewed before execution."
+      },
+      "title": "Reduce latency in general flow",
+      "summary": "This task was noticeably slow. Review the slowest stage and trim context, actions, or response length before attempting deeper architectural changes.",
+      "evidence": {
+        "user_input": "...",
+        "action_summary": "planner:clarify",
+        "latency_seconds": 48.517,
+        "slowest_stage": "tts_seconds",
+        "timing_breakdown": {
+          "planning_seconds": 0.339,
+          "execution_seconds": 0.0,
+          "agent_total_seconds": 0.339,
+          "tts_seconds": 2.475,
+          "total_seconds": 48.517
+        }
+      },
+      "suggested_scope": [
+        "agents/planner.py",
+        "agents/executor.py",
+        "memory/self_improvement.py"
+      ],
+      "suggested_hints": [
+        "prefer_lower_latency_path",
+        "keep_response_brief"
+      ],
+      "execution_history": [],
+      "attempt_count": 0,
+      "regression_detected": false,
+      "related_regressed_proposal_ids": []
+    },
+    {
+      "id": "fdd8b9b6-2643-44c3-b43e-e71d893355c9",
+      "created_at": "2026-06-04T10:36:23.942993+00:00",
+      "status": "pending",
+      "proposal_type": "performance_tuning",
+      "domain": "general",
+      "source_interaction_id": "4072f8e0-e9a4-4a8b-9c85-6a62c211130c",
+      "trigger": "slow_task",
+      "priority": "medium",
+      "approval_policy": {
+        "mode": "manual",
+        "requires_human_approval": true,
+        "reason": "This proposal should be reviewed before execution."
+      },
+      "title": "Reduce latency in general flow",
+      "summary": "This task was noticeably slow. Review the slowest stage and trim context, actions, or response length before attempting deeper architectural changes.",
+      "evidence": {
+        "user_input": "Iris what time is it?",
+        "action_summary": "planner:clarify",
+        "latency_seconds": 20.8,
+        "slowest_stage": "planning_seconds",
+        "timing_breakdown": {
+          "planning_seconds": 6.907,
+          "execution_seconds": 0.0,
+          "agent_total_seconds": 6.907,
+          "tts_seconds": 2.959,
+          "total_seconds": 20.8
+        }
+      },
+      "suggested_scope": [
+        "agents/planner.py",
+        "agents/executor.py",
+        "memory/self_improvement.py"
+      ],
+      "suggested_hints": [
+        "prefer_lower_latency_path",
+        "simplify_planning_context",
+        "keep_response_brief"
+      ],
+      "execution_history": [],
+      "attempt_count": 0,
+      "regression_detected": false,
+      "related_regressed_proposal_ids": []
+    },
+    {
+      "id": "5ad709d6-bd89-4bb0-85f1-711e4e1d05e6",
+      "created_at": "2026-06-05T10:45:17.170425+00:00",
+      "status": "pending",
+      "proposal_type": "performance_tuning",
+      "domain": "general",
+      "source_interaction_id": "b7f4dd95-d311-4a08-8a80-090cb0936171",
+      "trigger": "slow_task",
+      "priority": "medium",
+      "approval_policy": {
+        "mode": "manual",
+        "requires_human_approval": true,
+        "reason": "This proposal should be reviewed before execution."
+      },
+      "title": "Reduce latency in general flow",
+      "summary": "This task was noticeably slow. Review the slowest stage and trim context, actions, or response length before attempting deeper architectural changes.",
+      "evidence": {
+        "user_input": "Iris What time is it?",
+        "action_summary": "planner:clarify",
+        "latency_seconds": 76.379,
+        "slowest_stage": "planning_seconds",
+        "timing_breakdown": {
+          "planning_seconds": 60.057,
+          "execution_seconds": 0.0,
+          "agent_total_seconds": 60.057,
+          "tts_seconds": 2.554,
+          "total_seconds": 76.379
+        }
+      },
+      "suggested_scope": [
+        "agents/planner.py",
+        "agents/executor.py",
+        "memory/self_improvement.py"
+      ],
+      "suggested_hints": [
+        "prefer_lower_latency_path",
+        "simplify_planning_context",
+        "keep_response_brief"
+      ],
+      "execution_history": [],
+      "attempt_count": 0,
+      "regression_detected": false,
+      "related_regressed_proposal_ids": []
+    }
+  ]
 }

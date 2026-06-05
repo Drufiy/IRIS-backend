@@ -25,14 +25,37 @@ def load_config(settings_path: str = "configs/settings.yaml") -> dict:
     config.setdefault("voice", {})
     config.setdefault("asr", {})
 
-    llm_api_key_env = config["llm"].get("api_key_env", "AGENT_ROUTER_TOKEN")
-    llm_api_key = os.getenv(llm_api_key_env, "")
-    if not llm_api_key:
-        llm_api_key = os.getenv("DEEPSEEK_API_KEY", "")
-    config["llm"]["api_key"] = llm_api_key
-    config["llm"]["deepseek_api_key"] = llm_api_key
-    default_llm_base_url = "https://api.anthropic.com/" if config["llm"].get("provider") == "agentrouter" else "https://api.deepseek.com"
-    config["llm"]["base_url"] = config["llm"].get("base_url", default_llm_base_url)
+    provider = config["llm"].get("provider", "deepseek").lower()
+
+    if provider == "shared":
+        # Shared backend: no user API key needed
+        shared_url = config["llm"].get("shared_backend_url", "http://localhost:8000")
+        config["llm"]["api_key"] = config["llm"].get("shared_backend_key", "") or "shared-default"
+        config["llm"]["deepseek_api_key"] = config["llm"]["api_key"]
+        config["llm"]["base_url"] = shared_url
+        config["llm"]["provider"] = "shared"
+    elif provider == "agentrouter":
+        # AgentRouter: read AGENT_ROUTER_TOKEN
+        llm_api_key = os.getenv("AGENT_ROUTER_TOKEN", "")
+        config["llm"]["api_key"] = llm_api_key
+        config["llm"]["deepseek_api_key"] = llm_api_key
+        config["llm"]["base_url"] = config["llm"].get("base_url", "https://agentrouter.org")
+        config["llm"]["provider"] = "agentrouter"
+    else:
+        # DeepSeek (default) or custom: read from DEEPSEEK_API_KEY or custom env var
+        llm_api_key_env = config["llm"].get("api_key_env", "DEEPSEEK_API_KEY")
+        llm_api_key = os.getenv(llm_api_key_env, "")
+        if not llm_api_key:
+            llm_api_key = os.getenv("DEEPSEEK_API_KEY", "")
+        if not llm_api_key:
+            llm_api_key = config["llm"].get("deepseek_api_key", "")
+        config["llm"]["api_key"] = llm_api_key
+        config["llm"]["deepseek_api_key"] = llm_api_key
+
+        if provider != "custom":
+            config["llm"]["provider"] = "deepseek"
+        config["llm"]["base_url"] = config["llm"].get("base_url", "https://api.deepseek.com")
+
     config["voice"]["elevenlabs_api_key"] = os.getenv("ELEVENLABS_API_KEY", "")
     config["asr"]["groq_api_key"] = os.getenv("GROQ_API_KEY", "")
 

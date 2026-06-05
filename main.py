@@ -45,8 +45,18 @@ async def main() -> None:
     tts = TTSRouter(config["voice"])
     actions = ActionRouter(ipc)
 
-    if not config["llm"].get("deepseek_api_key"):
-        log.warning("No DeepSeek API key found — LLM calls will fail")
+    provider = config["llm"].get("provider", "deepseek")
+    if provider == "shared":
+        shared_url = config["llm"].get("shared_backend_url", "")
+        log.info(f"Using shared backend mode: {shared_url}")
+    elif provider == "agentrouter":
+        if not config["llm"].get("api_key"):
+            log.warning("AgentRouter mode selected but no AGENT_ROUTER_TOKEN found")
+    elif provider == "deepseek":
+        if not config["llm"].get("deepseek_api_key"):
+            log.warning("DeepSeek mode selected but no DEEPSEEK_API_KEY found — LLM calls will fail")
+    else:
+        log.warning(f"Unknown LLM provider '{provider}'")
 
     llm = LLMRouter(config["llm"])
     asr = ASREngine(GroqWhisperBackend(config["asr"]["groq_api_key"]))
