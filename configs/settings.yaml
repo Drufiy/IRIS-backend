@@ -8,6 +8,10 @@ llm:
   provider: "deepseek"
 
   # For "shared" mode: URL of the shared backend proxy (e.g., deployed on Railway/Render)
+  # When in shared mode, this single URL proxies ALL services:
+  #   - LLM: POST /v1/chat/completions (→ DeepSeek)
+  #   - TTS: POST /v1/text-to-speech/{voice_id}/stream (→ ElevenLabs)
+  #   - ASR: POST /v1/audio/transcriptions (→ Groq)
   shared_backend_url: "http://localhost:8000"
 
   # For "shared" mode: optional auth token for the shared backend

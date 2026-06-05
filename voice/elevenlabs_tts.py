@@ -18,19 +18,20 @@ class ElevenLabsTTS:
     that plagues newer Python installations.
     """
 
-    BASE_URL = "https://api.elevenlabs.io/v1"
+    DEFAULT_BASE_URL = "https://api.elevenlabs.io/v1"
 
-    def __init__(self, api_key: str, voice_id: str, model: str = "eleven_turbo_v2_5") -> None:
+    def __init__(self, api_key: str, voice_id: str, model: str = "eleven_turbo_v2_5", base_url: str | None = None) -> None:
         self.api_key = api_key
         self.voice_id = voice_id
         self.model = model
+        self.base_url = (base_url or self.DEFAULT_BASE_URL).rstrip("/")
         self.headers = {"xi-api-key": api_key, "Content-Type": "application/json"}
         self._stop_flag = False
 
     async def speak(self, text: str) -> None:
         """Stream audio from ElevenLabs and play it. Interruptible via stop()."""
         self._stop_flag = False
-        url = f"{self.BASE_URL}/text-to-speech/{self.voice_id}/stream"
+        url = f"{self.base_url}/text-to-speech/{self.voice_id}/stream"
         payload = {
             "text": text,
             "model_id": self.model,

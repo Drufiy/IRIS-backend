@@ -1,44 +1,76 @@
 # IRIS Shared Backend
 
-A lightweight proxy server that lets IRIS users access the assistant without needing their own API keys. The server holds a shared DeepSeek API key and proxies requests from IRIS clients.
+A lightweight proxy server that lets IRIS users access the assistant **without needing their own API keys** for LLM, TTS, or ASR. The server holds shared API keys for:
 
-## Quick Deploy (Railway)
+- **LLM** — DeepSeek (chat completions)
+- **TTS** — ElevenLabs (text-to-speech)
+- **ASR** — Groq (speech-to-text)
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/IRIS-backend)
+## Deploy to Railway
 
-1. Click the button above
-2. Set `IRIS_SHARED_API_KEY` to your shared DeepSeek API key
-3. (Optional) Set `IRIS_AUTH_TOKEN` to a secret client auth token
-4. Deploy!
+### One-Click Deploy
 
-## Quick Deploy (Render)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new)
 
-1. Create a new Web Service
-2. Connect this directory
-3. Build command: `pip install -r requirements.txt`
-4. Start command: `uvicorn proxy_server:app --host 0.0.0.0 --port 8000`
-5. Add environment variable `IRIS_SHARED_API_KEY`
+### Manual Deploy
+
+1. Push this repo to GitHub
+2. Go to [railway.app](https://railway.app) and click **New Project** → **Deploy from GitHub repo**
+3. Select your Iris repo
+4. Railway auto-detects the `railway.json` in `backend/` — set the **Root Directory** to `backend`
+5. Add the following environment variables:
+
+| Variable | Example Value | Required |
+|----------|--------------|----------|
+| `IRIS_SHARED_OPENAI_KEY` | `sk-your-deepseek-key` | ✅ Yes (for LLM) |
+| `IRIS_SHARED_ELEVENLABS_KEY` | `your-elevenlabs-key` | ✅ Yes (for TTS) |
+| `IRIS_SHARED_GROQ_KEY` | `gsk_your-groq-key` | ✅ Yes (for ASR) |
+| `IRIS_AUTH_TOKEN` | `your-secret-token` | ✅ Yes (recommended) |
+| `MAX_REQUESTS_PER_MIN` | `30` | ❌ No |
+
+6. Click **Deploy**
+7. Note the generated URL (e.g., `https://iris-backend.up.railway.app`)
 
 ## Local Development
 
 ```bash
 cd backend
 pip install -r requirements.txt
-IRIS_SHARED_API_KEY=sk-your-key python proxy_server.py
+IRIS_SHARED_OPENAI_KEY=sk-your-key \
+  IRIS_SHARED_ELEVENLABS_KEY=your-elevenlabs-key \
+  IRIS_SHARED_GROQ_KEY=gsk_your-groq-key \
+  python proxy_server.py
 ```
 
 ## Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `IRIS_SHARED_API_KEY` | Yes | - | The DeepSeek API key to share with users |
-| `IRIS_AUTH_TOKEN` | No | (none) | Optional auth token for client authentication |
+| `IRIS_SHARED_OPENAI_KEY` | For LLM | - | Shared DeepSeek API key |
+| `IRIS_SHARED_ELEVENLABS_KEY` | For TTS | - | Shared ElevenLabs API key |
+| `IRIS_SHARED_GROQ_KEY` | For ASR | - | Shared Groq API key |
+| `IRIS_AUTH_TOKEN` | Recommended | (none) | Client auth token (Bearer) |
 | `MAX_REQUESTS_PER_MIN` | No | 30 | Rate limit per client IP |
 | `ALLOWED_ORIGINS` | No | * | CORS origins (comma-separated) |
 | `PORT` | No | 8000 | Server port |
 
 ## API Endpoints
 
-- `GET /health` - Health check
-- `GET /v1/models` - List available models
-- `POST /v1/chat/completions` - Chat completion (OpenAI-compatible)
+| Method | Path | Service |
+|--------|------|---------|
+| `GET` | `/health` | Health check |
+| `GET` | `/v1/models` | List available LLM models |
+| `POST` | `/v1/chat/completions` | LLM (DeepSeek) |
+| `POST` | `/v1/text-to-speech/{voice_id}/stream` | TTS (ElevenLabs) |
+| `POST` | `/v1/audio/transcriptions` | ASR (Groq) |
+
+## Client Configuration (in `settings.yaml`)
+
+```yaml
+llm:
+  provider: "shared"
+  shared_backend_url: "https://your-deployed-url.up.railway.app"
+  shared_backend_key: "your-secret-auth-token"
+```
+
+That's it! All three services (LLM, TTS, ASR) automatically route through the shared backend.

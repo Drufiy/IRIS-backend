@@ -15,10 +15,13 @@ class GroqWhisperBackend:
     Accepts float32 mono audio at 16kHz, returns ASRResult dict.
     """
 
-    def __init__(self, api_key: str, model: str = "whisper-large-v3-turbo"):
+    DEFAULT_BASE_URL = "https://api.groq.com/openai/v1"
+
+    def __init__(self, api_key: str, model: str = "whisper-large-v3-turbo", base_url: str | None = None):
         from groq import Groq
 
-        self.client = Groq(api_key=api_key)
+        resolved_url = base_url or self.DEFAULT_BASE_URL
+        self.client = Groq(api_key=api_key, base_url=resolved_url)
         self.model = model
 
     def transcribe(self, audio) -> dict:

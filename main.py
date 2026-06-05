@@ -59,7 +59,10 @@ async def main() -> None:
         log.warning(f"Unknown LLM provider '{provider}'")
 
     llm = LLMRouter(config["llm"])
-    asr = ASREngine(GroqWhisperBackend(config["asr"]["groq_api_key"]))
+    asr = ASREngine(GroqWhisperBackend(
+        api_key=config["asr"]["groq_api_key"],
+        base_url=config["asr"].get("groq_base_url"),
+    ))
 
     # ── Memory layer ────────────────────────────────────────────────────────
     memory = MemoryManager(config.get("memory", {}))

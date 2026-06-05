@@ -56,7 +56,34 @@ def load_config(settings_path: str = "configs/settings.yaml") -> dict:
             config["llm"]["provider"] = "deepseek"
         config["llm"]["base_url"] = config["llm"].get("base_url", "https://api.deepseek.com")
 
-    config["voice"]["elevenlabs_api_key"] = os.getenv("ELEVENLABS_API_KEY", "")
-    config["asr"]["groq_api_key"] = os.getenv("GROQ_API_KEY", "")
+    # ── Inject service keys ────────────────────────────────────────────────
+    config.setdefault("voice", {})
+    config.setdefault("asr", {})
+
+    provider = config["llm"].get("provider", "deepseek").lower()
+
+    if provider == "shared":
+        # Shared backend mode: route all services through the shared proxy
+        shared_url = config["llm"].get("shared_backend_url", "http://localhost:8000").rstrip("/")
+
+        # LLM: already handled above
+        # TTS: point to shared backend instead of api.elevenlabs.io
+        # Note: /v1 suffix so ElevenLabsTTS constructs the correct path
+        config["voice"]["elevenlabs_api_key"] = config["llm"].get("shared_backend_key", "") or "shared-default"
+        config["voice"]["elevenlabs_base_url"] = f"{shared_url}/v1"
+
+        # ASR: point to shared backend instead of api.groq.com
+        # Note: /v1 suffix so Groq SDK constructs correct paths like /v1/audio/transcriptions
+        config["asr"]["groq_api_key"] = config["llm"].get("shared_backend_key", "") or "shared-default"
+        config["asr"]["groq_base_url"] = f"{shared_url}/v1"
+    else:
+        # Normal mode: use user's own API keys
+        config["voice"]["elevenlabs_api_key"] = os.getenv("ELEVENLABS_API_KEY", "")
+        # No custom base_url — use default ElevenLabs URL
+        config["voice"].pop("elevenlabs_base_url", None)
+
+        config["asr"]["groq_api_key"] = os.getenv("GROQ_API_KEY", "")
+        # No custom base_url — use default Groq URL
+        config["asr"].pop("groq_base_url", None)
 
     return config
