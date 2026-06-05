@@ -1,7 +1,8 @@
 """ElevenLabs streaming TTS client."""
 
 import asyncio
-import io
+import struct
+import subprocess
 
 import httpx
 from loguru import logger
@@ -11,6 +12,10 @@ class ElevenLabsTTS:
     """
     Streams audio from ElevenLabs and plays it via pyaudio.
     Call stop() from any coroutine to interrupt mid-playback.
+
+    Uses ffmpeg (system install) for MP3 decoding instead of pydub,
+    which avoids the broken ``audioop`` / ``pyaudioop`` import chain
+    that plagues newer Python installations.
     """
 
     BASE_URL = "https://api.elevenlabs.io/v1"
@@ -60,28 +65,59 @@ class ElevenLabsTTS:
             await loop.run_in_executor(None, self._play_sync, audio_bytes)
 
     def _play_sync(self, audio_bytes: bytes) -> None:
-        """Synchronous MP3 decode and pyaudio playback."""
+        """Decode MP3 bytes via ffmpeg and play with pyaudio."""
         import pyaudio
-        from pydub import AudioSegment
 
         try:
-            audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format="mp3")
+            # Decode MP3 -> WAV (PCM s16le) via ffmpeg pipe
+            proc = subprocess.run(
+                [
+                    "ffmpeg",
+                    "-i", "pipe:0",
+                    "-f", "wav",
+                    "-acodec", "pcm_s16le",
+                    "pipe:1",
+                ],
+                input=audio_bytes,
+                capture_output=True,
+                timeout=30,
+            )
+            if proc.returncode != 0:
+                stderr = proc.stderr.decode(errors="replace")[:300]
+                logger.warning(f"ffmpeg decode failed (rc={proc.returncode}): {stderr}")
+                return
+
+            wav_bytes = proc.stdout
+            if len(wav_bytes) < 44:
+                logger.warning("ffmpeg produced truncated WAV output")
+                return
+
+            # Parse WAV header
+            channels = struct.unpack_from("<H", wav_bytes, 22)[0]
+            rate = struct.unpack_from("<I", wav_bytes, 24)[0]
+            bits_per_sample = struct.unpack_from("<H", wav_bytes, 34)[0]
+            sample_width = bits_per_sample // 8
+
+            # Audio data starts after the 44-byte PCM WAV header
+            data = wav_bytes[44:]
+
             player = pyaudio.PyAudio()
             stream = player.open(
-                format=player.get_format_from_width(audio.sample_width),
-                channels=audio.channels,
-                rate=audio.frame_rate,
+                format=player.get_format_from_width(sample_width),
+                channels=channels,
+                rate=rate,
                 output=True,
             )
-            chunk_size = int(audio.frame_rate * audio.sample_width * audio.channels * 0.1)
-            data = audio.raw_data
-            for index in range(0, len(data), chunk_size):
+            chunk_size = int(rate * sample_width * channels * 0.1)  # 100 ms
+            for i in range(0, len(data), chunk_size):
                 if self._stop_flag:
                     break
-                stream.write(data[index : index + chunk_size])
+                stream.write(data[i : i + chunk_size])
             stream.stop_stream()
             stream.close()
             player.terminate()
+        except subprocess.TimeoutExpired:
+            logger.warning("ffmpeg decode timed out")
         except Exception as exc:
             logger.warning(f"Audio playback error: {exc}")
 
