@@ -45,18 +45,17 @@ async def main() -> None:
     tts = TTSRouter(config["voice"])
     actions = ActionRouter(ipc)
 
-    provider = config["llm"].get("provider", "deepseek")
-    if provider == "shared":
-        shared_url = config["llm"].get("shared_backend_url", "")
-        log.info(f"Using shared backend mode: {shared_url}")
-    elif provider == "agentrouter":
-        if not config["llm"].get("api_key"):
-            log.warning("AgentRouter mode selected but no AGENT_ROUTER_TOKEN found")
-    elif provider == "deepseek":
-        if not config["llm"].get("deepseek_api_key"):
-            log.warning("DeepSeek mode selected but no DEEPSEEK_API_KEY found — LLM calls will fail")
+    mode = config.get("mode", "local")
+    if mode == "remote":
+        remote_cfg = config.get("remote", {})
+        backend_url = remote_cfg.get("backend_url", "http://localhost:8000")
+        log.info(f"Remote mode: routing all services through shared backend at {backend_url}")
     else:
-        log.warning(f"Unknown LLM provider '{provider}'")
+        llm_base_url = config["llm"].get("base_url", "https://api.deepseek.com")
+        has_api_key = bool(config["llm"].get("api_key"))
+        log.info(f"Local mode: LLM at {llm_base_url} (key configured: {has_api_key})")
+        if not has_api_key:
+            log.warning("No API key configured — LLM calls will fail")
 
     llm = LLMRouter(config["llm"])
     asr = ASREngine(GroqWhisperBackend(

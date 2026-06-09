@@ -2,17 +2,21 @@
 
 A lightweight FastAPI server that proxies chat completion, text-to-speech,
 and speech-to-text APIs through shared API keys so IRIS users don't need
-their own keys.
+their own keys. The proxy is a **smart router** — it reads the `model` field
+from chat completion requests and routes to the correct upstream provider
+(e.g. DeepSeek, AgentRouter/Anthropic).
 
 Deploy on Railway, Render, Fly.io, or any container platform.
 
 Environment variables:
-  IRIS_SHARED_OPENAI_KEY    - Shared DeepSeek/OpenAI-compatible API key (required for LLM)
-  IRIS_SHARED_ELEVENLABS_KEY - Shared ElevenLabs API key (required for TTS)
-  IRIS_SHARED_GROQ_KEY      - Shared Groq API key (required for ASR)
-  IRIS_AUTH_TOKEN           - Optional auth token for client authentication
-  MAX_REQUESTS_PER_MIN      - Rate limit per client (default: 30)
-  ALLOWED_ORIGINS           - Comma-separated CORS origins (default: *)
+  IRIS_SHARED_DEEPSEEK_KEY       - Shared DeepSeek/OpenAI-compatible API key (for LLM)
+  IRIS_SHARED_OPENAI_KEY         - Alias for IRIS_SHARED_DEEPSEEK_KEY (backward compat)
+  IRIS_SHARED_AGENTROUTER_KEY    - Shared AgentRouter API key (for Claude/Anthropic models)
+  IRIS_SHARED_ELEVENLABS_KEY     - Shared ElevenLabs API key (required for TTS)
+  IRIS_SHARED_GROQ_KEY           - Shared Groq API key (required for ASR)
+  IRIS_AUTH_TOKEN                - Optional auth token for client authentication
+  MAX_REQUESTS_PER_MIN           - Rate limit per client (default: 30)
+  ALLOWED_ORIGINS                - Comma-separated CORS origins (default: *)
 """
 
 from __future__ import annotations
@@ -25,11 +29,16 @@ from collections import defaultdict
 import httpx
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse
 
 # ── Configuration ───────────────────────────────────────────────────────────
 
-SHARED_OPENAI_KEY = os.environ.get("IRIS_SHARED_OPENAI_KEY", "") or os.environ.get("IRIS_SHARED_API_KEY", "")
+SHARED_DEEPSEEK_KEY = (
+    os.environ.get("IRIS_SHARED_DEEPSEEK_KEY", "")
+    or os.environ.get("IRIS_SHARED_OPENAI_KEY", "")
+    or os.environ.get("IRIS_SHARED_API_KEY", "")
+)
+SHARED_AGENTROUTER_KEY = os.environ.get("IRIS_SHARED_AGENTROUTER_KEY", "")
 SHARED_ELEVENLABS_KEY = os.environ.get("IRIS_SHARED_ELEVENLABS_KEY", "")
 SHARED_GROQ_KEY = os.environ.get("IRIS_SHARED_GROQ_KEY", "")
 AUTH_TOKEN = os.environ.get("IRIS_AUTH_TOKEN", "")
@@ -39,8 +48,30 @@ ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
 # Upstream API endpoints
 DEEPSEEK_CHAT_URL = "https://api.deepseek.com/v1/chat/completions"
 DEEPSEEK_MODELS_URL = "https://api.deepseek.com/v1/models"
+AGENTROUTER_CHAT_URL = "https://agentrouter.org/v1/chat/completions"
+AGENTROUTER_MODELS_URL = "https://agentrouter.org/v1/models"
 ELEVENLABS_BASE = "https://api.elevenlabs.io"
 GROQ_ASR_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
+
+# ── Model Routing Table ─────────────────────────────────────────────────────
+# Maps request model names to (upstream_url, api_key).
+# The proxy reads the "model" field from the request body and routes accordingly.
+MODEL_ROUTES: dict[str, tuple[str, str]] = {
+    # DeepSeek models → DeepSeek API
+    "deepseek-chat": (DEEPSEEK_CHAT_URL, SHARED_DEEPSEEK_KEY),
+    "deepseek-reasoner": (DEEPSEEK_CHAT_URL, SHARED_DEEPSEEK_KEY),
+    "deepseek-v4-flash": (DEEPSEEK_CHAT_URL, SHARED_DEEPSEEK_KEY),
+    "deepseek-v4-pro": (DEEPSEEK_CHAT_URL, SHARED_DEEPSEEK_KEY),
+    # AgentRouter / Anthropic models → AgentRouter API
+    "claude-sonnet-4-20250514": (AGENTROUTER_CHAT_URL, SHARED_AGENTROUTER_KEY),
+    "claude-opus-4-20250514": (AGENTROUTER_CHAT_URL, SHARED_AGENTROUTER_KEY),
+    "claude-haiku-3-5-20241022": (AGENTROUTER_CHAT_URL, SHARED_AGENTROUTER_KEY),
+    "claude-sonnet-4-20250514-thinking": (AGENTROUTER_CHAT_URL, SHARED_AGENTROUTER_KEY),
+}
+
+# Default upstream when model isn't in the routing table
+DEFAULT_CHAT_URL = DEEPSEEK_CHAT_URL
+DEFAULT_MODEL_KEY = SHARED_DEEPSEEK_KEY
 
 # Rate limiter state
 _rate_limit: dict[str, list[float]] = defaultdict(list)
@@ -48,10 +79,10 @@ _rate_limit: dict[str, list[float]] = defaultdict(list)
 app = FastAPI(
     title="IRIS Shared Backend",
     description=(
-        "Proxy server for IRIS voice assistant — shared API keys for "
-        "LLM (DeepSeek), TTS (ElevenLabs), and ASR (Groq)."
+        "Proxy server for IRIS voice assistant — smart model routing to "
+        "DeepSeek, AgentRouter (Anthropic), ElevenLabs (TTS), and Groq (ASR)."
     ),
-    version="1.1.0",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -64,6 +95,7 @@ app.add_middleware(
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
+
 
 def verify_auth(request: Request) -> None:
     """Verify the client auth token if configured."""
@@ -116,15 +148,19 @@ def require_shared_key(key: str, service_name: str) -> None:
 
 # ── Health ───────────────────────────────────────────────────────────────────
 
+
 @app.get("/health")
 async def health():
     """Health check endpoint reporting which services are configured."""
     return {
         "status": "ok",
         "service": "iris-shared-backend",
-        "version": "1.1.0",
+        "version": "2.0.0",
         "services": {
-            "llm": bool(SHARED_OPENAI_KEY),
+            "llm": {
+                "deepseek": bool(SHARED_DEEPSEEK_KEY),
+                "agentrouter": bool(SHARED_AGENTROUTER_KEY),
+            },
             "tts": bool(SHARED_ELEVENLABS_KEY),
             "asr": bool(SHARED_GROQ_KEY),
         },
@@ -132,43 +168,77 @@ async def health():
     }
 
 
-# ── LLM: DeepSeek / OpenAI-Compatible Chat Completions ──────────────────────
+# ── LLM: Model Routing ──────────────────────────────────────────────────────
+
 
 @app.get("/v1/models")
 async def list_models(request: Request):
-    """List available models (proxied from DeepSeek)."""
+    """List available models from all configured upstreams (DeepSeek + AgentRouter)."""
     verify_auth(request)
     check_rate_limit(get_client_ip(request))
-    require_shared_key(SHARED_OPENAI_KEY, "LLM")
 
-    headers = {"Authorization": f"Bearer {SHARED_OPENAI_KEY}"}
-    async with httpx.AsyncClient(timeout=10) as client:
-        response = await client.get(DEEPSEEK_MODELS_URL, headers=headers)
+    merged: list[dict] = []
 
-    if response.status_code != 200:
-        return {
-            "object": "list",
-            "data": [
-                {"id": "deepseek-chat", "object": "model"},
-                {"id": "deepseek-reasoner", "object": "model"},
-                {"id": "deepseek-v4-flash", "object": "model"},
-                {"id": "deepseek-v4-pro", "object": "model"},
-            ],
-        }
-    return response.json()
+    # Fetch from DeepSeek
+    if SHARED_DEEPSEEK_KEY:
+        headers = {"Authorization": f"Bearer {SHARED_DEEPSEEK_KEY}"}
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(DEEPSEEK_MODELS_URL, headers=headers)
+            if response.status_code == 200:
+                merged.extend(response.json().get("data", []))
+        except Exception:
+            pass
+
+        # Always include fallback DeepSeek models
+        merged.extend([
+            {"id": "deepseek-chat", "object": "model", "owned_by": "deepseek"},
+            {"id": "deepseek-reasoner", "object": "model", "owned_by": "deepseek"},
+            {"id": "deepseek-v4-flash", "object": "model", "owned_by": "deepseek"},
+            {"id": "deepseek-v4-pro", "object": "model", "owned_by": "deepseek"},
+        ])
+
+    # Fetch from AgentRouter
+    if SHARED_AGENTROUTER_KEY:
+        headers = {"Authorization": f"Bearer {SHARED_AGENTROUTER_KEY}"}
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(AGENTROUTER_MODELS_URL, headers=headers)
+            if response.status_code == 200:
+                merged.extend(response.json().get("data", []))
+        except Exception:
+            pass
+
+        # Always include fallback AgentRouter models
+        merged.extend([
+            {"id": "claude-sonnet-4-20250514", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-opus-4-20250514", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-sonnet-4-20250514-thinking", "object": "model", "owned_by": "anthropic"},
+        ])
+
+    # Deduplicate by model id
+    seen = set()
+    unique: list[dict] = []
+    for m in merged:
+        mid = m.get("id", "")
+        if mid not in seen:
+            seen.add(mid)
+            unique.append(m)
+
+    return {"object": "list", "data": unique}
 
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request):
-    """Proxy chat completion requests to DeepSeek API.
+    """Proxy chat completion requests with smart model routing.
 
-    Supports both streaming (SSE) and non-streaming responses.
-    Uses the shared API key — no user key required.
+    Reads the `model` field from the request body and routes to the
+    correct upstream provider (DeepSeek, AgentRouter, etc.) based on
+    the MODEL_ROUTES table. Supports both streaming (SSE) and non-streaming.
     """
     verify_auth(request)
     client_ip = get_client_ip(request)
     check_rate_limit(client_ip)
-    require_shared_key(SHARED_OPENAI_KEY, "LLM")
 
     try:
         body = await request.json()
@@ -178,13 +248,25 @@ async def chat_completions(request: Request):
     if "messages" not in body:
         raise HTTPException(status_code=400, detail="Missing 'messages' in request body")
 
+    model = body.get("model", "deepseek-v4-flash")
     stream = body.get("stream", False)
+
+    # Resolve upstream from model routing table
+    upstream_url, upstream_key = MODEL_ROUTES.get(model, (DEFAULT_CHAT_URL, DEFAULT_MODEL_KEY))
+
+    if not upstream_key:
+        provider_name = "DeepSeek" if upstream_url == DEEPSEEK_CHAT_URL else "AgentRouter"
+        raise HTTPException(
+            status_code=500,
+            detail=f"Model '{model}' requires a {provider_name} API key but none is configured on the server",
+        )
+
     headers = {
-        "Authorization": f"Bearer {SHARED_OPENAI_KEY}",
+        "Authorization": f"Bearer {upstream_key}",
         "Content-Type": "application/json",
     }
     payload = {
-        "model": body.get("model", "deepseek-v4-flash"),
+        "model": model,
         "messages": body["messages"],
         "stream": stream,
         "max_tokens": body.get("max_tokens", 4096),
@@ -192,22 +274,22 @@ async def chat_completions(request: Request):
     }
 
     if stream:
-        return await _proxy_chat_stream(headers, payload)
-    return await _proxy_chat_sync(headers, payload)
+        return await _proxy_chat_stream(upstream_url, headers, payload)
+    return await _proxy_chat_sync(upstream_url, headers, payload)
 
 
-async def _proxy_chat_sync(headers: dict, payload: dict) -> dict:
+async def _proxy_chat_sync(upstream_url: str, headers: dict, payload: dict) -> dict:
     async with httpx.AsyncClient(timeout=120) as client:
-        response = await client.post(DEEPSEEK_CHAT_URL, json=payload, headers=headers)
+        response = await client.post(upstream_url, json=payload, headers=headers)
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=f"Upstream API error: {response.text[:500]}")
     return response.json()
 
 
-async def _proxy_chat_stream(headers: dict, payload: dict) -> StreamingResponse:
+async def _proxy_chat_stream(upstream_url: str, headers: dict, payload: dict) -> StreamingResponse:
     async def event_stream():
         async with httpx.AsyncClient(timeout=120) as client:
-            async with client.stream("POST", DEEPSEEK_CHAT_URL, json=payload, headers=headers) as upstream:
+            async with client.stream("POST", upstream_url, json=payload, headers=headers) as upstream:
                 if upstream.status_code != 200:
                     error_text = await upstream.aread()
                     yield f"data: {json.dumps({'error': error_text.decode(errors='replace')[:500]})}\n\n"
@@ -226,14 +308,14 @@ async def _proxy_chat_stream(headers: dict, payload: dict) -> StreamingResponse:
 
 # ── TTS: ElevenLabs Text-to-Speech ──────────────────────────────────────────
 
+
 @app.post("/v1/text-to-speech/{voice_id}/stream")
 async def text_to_speech(voice_id: str, request: Request):
     """Proxy ElevenLabs streaming TTS requests.
 
     Accepts the same JSON body as ElevenLabs:
       { "text": "...", "model_id": "...", "voice_settings": {...} }
-    Uses the shared ElevenLabs API key.
-    Returns streaming audio (audio/mpeg).
+    Uses the shared ElevenLabs API key. Returns streaming audio (audio/mpeg).
     """
     verify_auth(request)
     check_rate_limit(get_client_ip(request))
@@ -277,6 +359,7 @@ async def text_to_speech(voice_id: str, request: Request):
 
 # ── ASR: Groq Audio Transcription ───────────────────────────────────────────
 
+
 @app.post("/v1/audio/transcriptions")
 async def audio_transcriptions(
     request: Request,
@@ -287,8 +370,7 @@ async def audio_transcriptions(
     """Proxy Groq audio transcription requests.
 
     Accepts multipart/form-data with a file upload (same as Groq/OpenAI format).
-    Uses the shared Groq API key.
-    Returns JSON with the transcript.
+    Uses the shared Groq API key. Returns JSON with the transcript.
     """
     verify_auth(request)
     check_rate_limit(get_client_ip(request))
@@ -320,8 +402,10 @@ if __name__ == "__main__":
     import uvicorn
 
     configured = []
-    if SHARED_OPENAI_KEY:
+    if SHARED_DEEPSEEK_KEY:
         configured.append("LLM (DeepSeek)")
+    if SHARED_AGENTROUTER_KEY:
+        configured.append("LLM (AgentRouter)")
     if SHARED_ELEVENLABS_KEY:
         configured.append("TTS (ElevenLabs)")
     if SHARED_GROQ_KEY:
@@ -329,13 +413,14 @@ if __name__ == "__main__":
 
     if not configured:
         print("ERROR: No shared API keys configured!")
-        print("Set at least one of: IRIS_SHARED_OPENAI_KEY, IRIS_SHARED_ELEVENLABS_KEY, IRIS_SHARED_GROQ_KEY")
+        print("Set at least one of: IRIS_SHARED_DEEPSEEK_KEY, IRIS_SHARED_AGENTROUTER_KEY,")
+        print("  IRIS_SHARED_ELEVENLABS_KEY, IRIS_SHARED_GROQ_KEY")
         exit(1)
 
     port = int(os.environ.get("PORT", "8000"))
     host = os.environ.get("HOST", "0.0.0.0")
 
-    print(f"IRIS Shared Backend v1.1.0 starting on {host}:{port}")
+    print(f"IRIS Shared Backend v2.0.0 starting on {host}:{port}")
     print(f"Configured services: {', '.join(configured)}")
     print(f"Auth token configured: {bool(AUTH_TOKEN)}")
     print(f"Rate limit: {RATE_LIMIT} req/min per client")

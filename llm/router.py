@@ -1,7 +1,11 @@
-"""Task-aware routing across multiple LLM backends (DeepSeek, AgentRouter, shared).
+"""Task-aware routing across LLM backends.
 
-All providers now use direct HTTP calls instead of spawning CLI subprocesses,
-resulting in significantly faster response times."""
+Two operating modes:
+  - remote:  All requests go through the shared backend proxy.
+  - local:   Requests go directly to the configured base_url.
+
+All providers use direct HTTP calls (OpenAI-compatible chat completions).
+"""
 
 from __future__ import annotations
 
@@ -11,17 +15,11 @@ from typing import AsyncGenerator
 from llm.providers.base import BaseLLMProvider
 from llm.providers.http_provider import HttpProvider
 
-# ── Provider type constants ──────────────────────────────────────────────────
-PROVIDER_DEEPSEEK = "deepseek"       # Direct api.deepseek.com calls
-PROVIDER_AGENTROUTER = "agentrouter"  # Direct agentrouter.org calls
-PROVIDER_SHARED = "shared"           # Shared backend proxy
-PROVIDER_CUSTOM = "custom"           # Custom OpenAI-compatible endpoint
+# ── Mode constants ───────────────────────────────────────────────────────────
+MODE_REMOTE = "remote"
+MODE_LOCAL = "local"
 
-# ── Default base URLs ────────────────────────────────────────────────────────
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
-AGENTROUTER_BASE_URL = "https://agentrouter.org"
-
-# ── Model maps for each provider ─────────────────────────────────────────────
+# ── Default model map ───────────────────────────────────────────────────────
 TASK_MODEL_MAP = {
     "plan": "deepseek-v4-pro",
     "chat": "deepseek-v4-pro",
@@ -33,13 +31,11 @@ TASK_MODEL_MAP = {
 
 
 class LLMRouter:
-    """Selects a provider-backed model for each task.
+    """Routes LLM requests to the appropriate backend.
 
-    Provider modes (configured via config['provider']):
-      - "deepseek":     Direct calls to api.deepseek.com (user's own key)
-      - "agentrouter":  Direct calls to agentrouter.org (user's own key)
-      - "shared":       Calls through the shared backend proxy (no user key needed)
-      - "custom":       Any OpenAI-compatible endpoint
+    Modes (configured via config['mode']):
+      - "remote":  All models hit the shared backend proxy.
+      - "local":   All models hit the user-configured base_url directly.
     """
 
     def __init__(self, config: dict, providers: dict[str, BaseLLMProvider] | None = None):
@@ -49,7 +45,7 @@ class LLMRouter:
         self.task_routing = {**TASK_MODEL_MAP, **config.get("task_routing", {})}
         self.session_token_budget = int(config.get("session_token_budget", 0) or 0)
         self.enforce_budget = bool(config.get("enforce_token_budget", False))
-        self.provider_type = self._resolve_provider_type()
+        self.mode = config.get("mode", MODE_LOCAL)
         self.usage = {
             "requests": 0,
             "prompt_tokens": 0,
@@ -64,8 +60,8 @@ class LLMRouter:
 
         model_names = list(self.providers.keys())
         self.logger.info(
-            "LLMRouter ready: provider=%s base_url=%s models=%s",
-            self.provider_type,
+            "LLMRouter ready: mode=%s base_url=%s models=%s",
+            self.mode,
             config.get("base_url", "default"),
             model_names,
         )
@@ -137,74 +133,29 @@ class LLMRouter:
 
     # ── Provider building ────────────────────────────────────────────────────
 
-    def _resolve_provider_type(self) -> str:
-        """Determine which provider backend to use from config."""
-        provider = self.config.get("provider", PROVIDER_DEEPSEEK).lower()
-        if provider == "shared" or provider == PROVIDER_SHARED:
-            return PROVIDER_SHARED
-        if provider == "agentrouter" or provider == PROVIDER_AGENTROUTER:
-            return PROVIDER_AGENTROUTER
-        if provider == "custom":
-            return PROVIDER_CUSTOM
-        return PROVIDER_DEEPSEEK
-
     def _build_providers(self, config: dict) -> dict[str, BaseLLMProvider]:
-        """Build HttpProviders for each model based on the provider type."""
-        provider_type = self.provider_type
+        """Build HttpProviders based on the operating mode."""
+        mode = config.get("mode", MODE_LOCAL)
         models = config.get("models", [
             "deepseek-v4-flash",
             "deepseek-v4-pro",
             "deepseek-chat",
             "deepseek-reasoner",
+            "claude-sonnet-4-20250514",
+            "claude-opus-4-20250514",
         ])
 
-        if provider_type == PROVIDER_SHARED:
-            return self._build_shared_providers(config, models)
-        elif provider_type == PROVIDER_AGENTROUTER:
-            return self._build_agentrouter_providers(config, models)
-        elif provider_type == PROVIDER_CUSTOM:
-            return self._build_custom_providers(config, models)
+        base_url = (config.get("base_url", "") or "https://api.deepseek.com").rstrip("/")
+        api_key = config.get("api_key", "")
+
+        if mode == MODE_REMOTE:
+            self.logger.info("Remote mode: routing all models through shared backend at %s", base_url)
         else:
-            return self._build_deepseek_providers(config, models)
+            self.logger.info("Local mode: routing all models directly to %s", base_url)
 
-    def _build_deepseek_providers(self, config: dict, models: list[str]) -> dict[str, BaseLLMProvider]:
-        """DeepSeek: uses user's own API key via api.deepseek.com."""
-        api_key = config.get("deepseek_api_key") or config.get("api_key", "")
-        base_url = DEEPSEEK_BASE_URL
-        return {
-            model: HttpProvider(model, config, base_url=base_url, api_key=api_key)
-            for model in models
-        }
+        if not api_key:
+            self.logger.warning("No API key configured — LLM calls will fail")
 
-    def _build_agentrouter_providers(self, config: dict, models: list[str]) -> dict[str, BaseLLMProvider]:
-        """AgentRouter: uses user's own AgentRouter token via agentrouter.org."""
-        api_key = config.get("api_key", "")
-        base_url = AGENTROUTER_BASE_URL
-        return {
-            model: HttpProvider(model, config, base_url=base_url, api_key=api_key)
-            for model in models
-        }
-
-    def _build_shared_providers(self, config: dict, models: list[str]) -> dict[str, BaseLLMProvider]:
-        """Shared backend: uses the shared proxy URL, no user API key needed."""
-        shared_url = config.get("shared_backend_url", "").rstrip("/")
-        if not shared_url:
-            raise RuntimeError(
-                "Shared backend mode selected but no 'shared_backend_url' configured. "
-                "Set it in settings.yaml under llm.shared_backend_url."
-            )
-        shared_key = config.get("shared_backend_key", "") or config.get("api_key", "")
-        return {
-            model: HttpProvider(model, config, base_url=shared_url, api_key=shared_key or "shared-default")
-            for model in models
-        }
-
-    def _build_custom_providers(self, config: dict, models: list[str]) -> dict[str, BaseLLMProvider]:
-        """Custom: uses user-provided base_url and api_key."""
-        base_url = config.get("base_url", "").rstrip("/")
-        api_key = config.get("api_key", "")
-        if not base_url:
-            raise RuntimeError("Custom provider mode selected but no 'base_url' configured.")
         return {
             model: HttpProvider(model, config, base_url=base_url, api_key=api_key)
             for model in models

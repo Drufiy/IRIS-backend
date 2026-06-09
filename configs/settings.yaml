@@ -1,33 +1,30 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# IRIS Configuration
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Operation Mode ──────────────────────────────────────────────────────────
+#   "remote"  — All traffic (LLM, TTS, ASR) routes through the shared backend
+#               proxy. You only need the proxy URL + optional auth token.
+#               No individual API keys required.
+#
+#   "local"   — Each service uses your own API keys and endpoints.
+#               Fully configurable — set base_url, api_key_env, and model
+#               independently for LLM, TTS, and ASR.
+mode: "local"
+
+# ── Remote mode (only used when mode: "remote") ─────────────────────────────
+# Single proxy URL routes all three services. The proxy holds the shared keys.
+remote:
+  backend_url: "http://localhost:8000"
+  auth_token_env: "IRIS_AUTH_TOKEN"          # optional — env var name for token
+
+# ── Local mode: LLM ─────────────────────────────────────────────────────────
+# Used when mode: "local". Also, task_routing and default_model apply in both
+# modes (they determine which model name to request).
 llm:
-  # ── Provider selection ────────────────────────────────────────────────────
-  # Options:
-  #   "deepseek"     — Direct calls to api.deepseek.com (user's own DEEPSEEK_API_KEY)
-  #   "agentrouter"  — Direct calls to agentrouter.org (user's own AGENT_ROUTER_TOKEN)
-  #   "shared"       — Shared backend proxy (no user API key needed)
-  #   "custom"       — Any OpenAI-compatible endpoint
-  provider: "deepseek"
-
-  # For "shared" mode: URL of the shared backend proxy (e.g., deployed on Railway/Render)
-  # When in shared mode, this single URL proxies ALL services:
-  #   - LLM: POST /v1/chat/completions (→ DeepSeek)
-  #   - TTS: POST /v1/text-to-speech/{voice_id}/stream (→ ElevenLabs)
-  #   - ASR: POST /v1/audio/transcriptions (→ Groq)
-  shared_backend_url: "http://localhost:8000"
-
-  # For "shared" mode: optional auth token for the shared backend
-  shared_backend_key: ""
-
-  # For "agentrouter" or "custom" mode: base URL of the API
   base_url: "https://api.deepseek.com"
-
-  # Environment variable name to read the API key from
-  api_key_env: "DEEPSEEK_API_KEY"
-
-  # Fallback: DeepSeek API key (read from DEEPSEEK_API_KEY env var or keys.env)
-  # In shared mode, this is NOT needed — the server holds the key
-  deepseek_api_key: ""
-
-  default_model: "deepseek-v4-pro"      # Default for general tasks
+  api_key_env: "DEEPSEEK_API_KEY"            # env var to read the API key from
+  default_model: "deepseek-v4-pro"
   task_routing:
     plan:   "deepseek-v4-pro"
     chat:   "deepseek-v4-pro"
@@ -36,11 +33,28 @@ llm:
     local:  "deepseek-v4-pro"
     memory: "deepseek-v4-pro"
 
+# ── Local mode: Voice / TTS ─────────────────────────────────────────────────
+# Used when mode: "local". Also used in remote mode for voice selection.
+voice:
+  api_key_env: "ELEVENLABS_API_KEY"
+  voice_name: "Bella"
+  voice_id: "hpp4J3VqNfWAUOO0d1Us"
+  model: "eleven_flash_v2_5"
+  stream: true
+
+# ── Local mode: ASR (speech-to-text) ────────────────────────────────────────
+# Used when mode: "local".
+asr:
+  api_key_env: "GROQ_API_KEY"
+  model: "whisper-large-v3-turbo"
+
+# ── Shared configs (applied in both modes) ──────────────────────────────────
+
 memory:
   chroma_path: "~/.iris/memory/chroma"
   embedding_model: "BAAI/bge-m3"
-  short_term_limit: 20              # Max messages in session buffer
-  top_k_retrieval: 5                # Semantic search results injected into prompt
+  short_term_limit: 20
+  top_k_retrieval: 5
   habit_retrieval_limit: 3
 
 audio:
@@ -49,49 +63,32 @@ audio:
   dtype: "float32"
   wake_words: ["jarvis", "iris"]
 
-asr:
-  model: "whisper-large-v3-turbo"
-  groq_api_key: ""                  # Injected from $GROQ_API_KEY env var or keys.env
-voice:
-  elevenlabs_voice_name: "Bella"                # Human-readable label for the selected voice
-  elevenlabs_voice_id: "hpp4J3VqNfWAUOO0d1Us"   # Pre-made female voice available via API
-  elevenlabs_model: "eleven_flash_v2_5"
-  stream: true
-
 ui:
   ipc_port: 7788
-  outline_width: 3                  # px
+  outline_width: 3
 
 browser:
   headless: false
   credentials_path: "~/.iris/credentials.enc"
 
 email:
-  # SMTP for sending emails
-  smtp_server: "smtp.gmail.com"          # Gmail: smtp.gmail.com, Outlook: smtp-mail.outlook.com
-  smtp_port: 587                         # 587 (TLS) or 465 (SSL)
-  sender_email: "your_email@gmail.com"   # Your email address
-  sender_password: ""                    # Your password or app-specific password
-
-  # IMAP for checking emails
-  imap_server: "imap.gmail.com"          # Gmail: imap.gmail.com, Outlook: outlook.office365.com
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  sender_email: "your_email@gmail.com"
+  sender_password: ""
+  imap_server: "imap.gmail.com"
   receiver_email: "your_email@gmail.com"
-  receiver_password: ""                  # Same password as above
+  receiver_password: ""
 
 weather:
-  # Get free API key at openweathermap.org/api
-  openweather_api_key: ""                # Your OpenWeather API key (free tier)
-  default_city: "London"                 # City for weather lookups if not specified
+  openweather_api_key: ""
+  default_city: "London"
 
 todo:
-  # Todos are stored locally in ~/.iris/tasks.json
-  # No configuration needed, but you can add default priority here
-  default_priority: "normal"             # "low", "normal", or "high"
+  default_priority: "normal"
 
 timers:
-  # Timers and reminders are stored locally in ~/.iris/reminders.json
-  # No configuration needed
-  default_timezone: "UTC"                # For reminder display times
+  default_timezone: "UTC"
 
 logging:
   level: "DEBUG"

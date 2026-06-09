@@ -14,9 +14,9 @@ class TTSRouter:
 
     def __init__(self, config: dict) -> None:
         api_key  = config["elevenlabs_api_key"]
-        voice_name = config.get("elevenlabs_voice_name", "Rachel")
-        voice_id = config.get("elevenlabs_voice_id", "21m00Tcm4TlvDq8ikWAM")
-        model    = config.get("elevenlabs_model", "eleven_turbo_v2_5")
+        voice_name = config.get("voice_name", config.get("elevenlabs_voice_name", "Rachel"))
+        voice_id = config.get("voice_id", config.get("elevenlabs_voice_id", "21m00Tcm4TlvDq8ikWAM"))
+        model    = config.get("model", config.get("elevenlabs_model", "eleven_turbo_v2_5"))
         base_url = config.get("elevenlabs_base_url")  # Optional: for shared backend mode
 
         self.voice_name = voice_name
