@@ -79,11 +79,29 @@ def _apply_local_mode(config: dict) -> None:
     """Local mode: each service uses independently configured API keys and endpoints."""
     # ── LLM ─────────────────────────────────────────────────────────────────
     llm_cfg = config.get("llm", {})
-    llm_key_env = llm_cfg.get("api_key_env", "DEEPSEEK_API_KEY")
-    llm_key = os.getenv(llm_key_env, "") or os.getenv("DEEPSEEK_API_KEY", "") or llm_cfg.get("api_key", "")
+    llm_provider = llm_cfg.get("provider", "")
+    default_llm_key_env = "AGENTIC_API_KEY" if llm_provider == "agentrouter" else "DEEPSEEK_API_KEY"
+    llm_key_env = llm_cfg.get("api_key_env", default_llm_key_env)
+    llm_key = os.getenv(llm_key_env, "")
+    if llm_provider == "agentrouter" and not llm_key:
+        llm_key = os.getenv("AGENT_ROUTER_TOKEN", "")
+    if not llm_key:
+        llm_key = os.getenv("DEEPSEEK_API_KEY", "") or llm_cfg.get("api_key", "")
+
+    env_llm_base_url = os.getenv("AGENTIC_API_BASE_URL", "").strip() if llm_provider == "agentrouter" else ""
+    default_llm_base_url = (
+        env_llm_base_url
+        if env_llm_base_url
+        else (
+            "https://api.agentrouter.to/api/agentic-api"
+            if llm_provider == "agentrouter"
+            else "https://api.deepseek.com"
+        )
+    )
     config["llm"]["mode"] = MODE_LOCAL
     config["llm"]["api_key"] = llm_key
-    config["llm"]["base_url"] = llm_cfg.get("base_url", "https://api.deepseek.com")
+    config["llm"]["deepseek_api_key"] = llm_key
+    config["llm"]["base_url"] = llm_cfg.get("base_url", default_llm_base_url)
 
     # ── TTS ─────────────────────────────────────────────────────────────────
     voice_cfg = config.get("voice", {})

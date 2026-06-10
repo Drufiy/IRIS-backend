@@ -22,16 +22,17 @@ remote:
 # Used when mode: "local". Also, task_routing and default_model apply in both
 # modes (they determine which model name to request).
 llm:
-  base_url: "https://api.deepseek.com"
-  api_key_env: "DEEPSEEK_API_KEY"            # env var to read the API key from
-  default_model: "deepseek-v4-pro"
+  provider: "agentrouter"
+  base_url: "https://api.agentrouter.to/api/agentic-api"
+  api_key_env: "AGENTIC_API_KEY"            # env var to read the API key from
+  default_model: "deepseek-v4-flash"
   task_routing:
-    plan:   "deepseek-v4-pro"
-    chat:   "deepseek-v4-pro"
-    code:   "deepseek-v4-pro"
-    reason: "deepseek-v4-pro"
-    local:  "deepseek-v4-pro"
-    memory: "deepseek-v4-pro"
+    plan:   "deepseek-v4-flash"
+    chat:   "deepseek-v4-flash"
+    code:   "deepseek-v4-flash"
+    reason: "deepseek-v4-flash"
+    local:  "deepseek-v4-flash"
+    memory: "deepseek-v4-flash"
 
 # ── Local mode: Voice / TTS ─────────────────────────────────────────────────
 # Used when mode: "local". Also used in remote mode for voice selection.
