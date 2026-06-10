@@ -65,6 +65,7 @@ audio:
 
 ui:
   ipc_port: 7788
+  http_port: 7790
   outline_width: 3
 
 browser:

@@ -2,6 +2,7 @@
 
 import asyncio
 import argparse
+from time import perf_counter
 
 from actions.action_router import ActionRouter
 from agents.agent_manager import AgentManager
@@ -16,6 +17,7 @@ from core.state_manager import StateManager
 from llm.router import LLMRouter
 from memory.memory_manager import MemoryManager
 from ui.ipc_bridge import IPCBridge
+from ui.runtime_snapshot import build_shell_snapshot
 from utils.config import load_config
 from utils.logger import setup_logger
 from voice.tts_router import TTSRouter
@@ -29,6 +31,7 @@ def parse_args() -> argparse.Namespace:
 
 
 async def main() -> None:
+    started_at = perf_counter()
     args = parse_args()
     config = load_config(args.config)
     log = setup_logger(
@@ -40,7 +43,10 @@ async def main() -> None:
         log.info("Running in headless mode — UI disabled")
 
     # ── Core infrastructure ─────────────────────────────────────────────────
-    ipc = IPCBridge(port=config["ui"]["ipc_port"])
+    ipc = IPCBridge(
+        port=config["ui"]["ipc_port"],
+        http_port=config.get("ui", {}).get("http_port", 7790),
+    )
     state = StateManager(ipc)
     tts = TTSRouter(config["voice"])
     actions = ActionRouter(ipc)
@@ -76,6 +82,17 @@ async def main() -> None:
         browser_agent=browser,
         coding_agent=coding_agent,
         tts=tts,
+    )
+
+    ipc.set_snapshot_provider(
+        lambda: build_shell_snapshot(
+            config=config,
+            state_manager=state,
+            llm_router=llm,
+            ipc_bridge=ipc,
+            started_at=started_at,
+            headless=args.headless,
+        )
     )
 
     # ── Audio pipeline ──────────────────────────────────────────────────────

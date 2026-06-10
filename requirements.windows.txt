@@ -28,6 +28,7 @@ pywinauto>=0.6.8       # Windows automation
 playwright>=1.44.0
 
 # UI / IPC
+aiohttp>=3.9.0
 websockets>=12.0
 
 # Utils

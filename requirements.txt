@@ -29,6 +29,7 @@ pyobjc>=10.0           # macOS bindings (macOS only)
 playwright>=1.44.0
 
 # UI / IPC
+aiohttp>=3.9.0
 websockets>=12.0
 
 # Utils

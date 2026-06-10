@@ -1,7 +1,10 @@
 """Python WebSocket server that bridges IRIS core to the Tauri UI overlay."""
 
 import asyncio
+import inspect
 import json
+
+from aiohttp import web
 import websockets
 from loguru import logger
 
@@ -13,10 +16,12 @@ class IPCBridge:
     Also handles approval_request/approval_response for DANGEROUS actions.
     """
 
-    def __init__(self, port: int = 7788) -> None:
+    def __init__(self, port: int = 7788, http_port: int = 7790, snapshot_provider=None) -> None:
         self.port = port
+        self.http_port = http_port
         self.clients: set = set()
         self._pending_approvals: dict[str, asyncio.Future] = {}
+        self.snapshot_provider = snapshot_provider
 
     async def handler(self, ws) -> None:
         """Handle a single WebSocket client connection."""
@@ -75,8 +80,71 @@ class IPCBridge:
         finally:
             self._pending_approvals.pop(req_id, None)
 
+    def set_snapshot_provider(self, snapshot_provider) -> None:
+        """Register a callable that returns the current desktop shell snapshot."""
+        self.snapshot_provider = snapshot_provider
+
+    async def _resolve_snapshot(self) -> dict:
+        if self.snapshot_provider is None:
+            return {
+                "bootstrap": {
+                    "appName": "IRIS Desktop",
+                    "platform": "python-runtime",
+                    "stage": "bridge unavailable",
+                    "backendBridge": "snapshot provider not attached",
+                },
+                "state": "idle",
+                "conversation": [],
+                "actions": [],
+                "providers": [],
+                "memory": [],
+                "settings": [],
+                "approval": {
+                    "title": "No approval data",
+                    "summary": "Snapshot provider has not been attached yet.",
+                    "consequence": "Desktop shell is receiving only fallback bridge data.",
+                },
+                "diagnostics": [],
+            }
+
+        snapshot = self.snapshot_provider()
+        if inspect.isawaitable(snapshot):
+            snapshot = await snapshot
+        return snapshot
+
+    async def _handle_health(self, _request: web.Request) -> web.Response:
+        snapshot = await self._resolve_snapshot()
+        return web.json_response(
+            {
+                "status": "ok",
+                "ipcPort": self.port,
+                "httpPort": self.http_port,
+                "clients": len(self.clients),
+                "pendingApprovals": len(self._pending_approvals),
+                "state": snapshot.get("state", "idle"),
+            }
+        )
+
+    async def _handle_shell_snapshot(self, _request: web.Request) -> web.Response:
+        snapshot = await self._resolve_snapshot()
+        return web.json_response(snapshot)
+
+    async def _start_http_server(self) -> None:
+        app = web.Application()
+        app.router.add_get("/health", self._handle_health)
+        app.router.add_get("/shell_snapshot", self._handle_shell_snapshot)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", self.http_port)
+        logger.info(f"IPC HTTP bridge starting on http://127.0.0.1:{self.http_port}")
+        await site.start()
+        try:
+            await asyncio.Future()
+        finally:
+            await runner.cleanup()
+
     async def start(self) -> None:
         """Start the WebSocket server. Blocks forever."""
         logger.info(f"IPC bridge starting on ws://localhost:{self.port}")
         async with websockets.serve(self.handler, "localhost", self.port):
-            await asyncio.Future()  # Run forever
+            await self._start_http_server()
