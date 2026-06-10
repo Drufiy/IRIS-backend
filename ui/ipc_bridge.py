@@ -84,6 +84,14 @@ class IPCBridge:
         """Register a callable that returns the current desktop shell snapshot."""
         self.snapshot_provider = snapshot_provider
 
+    @staticmethod
+    def _cors_headers() -> dict[str, str]:
+        return {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        }
+
     async def _resolve_snapshot(self) -> dict:
         if self.snapshot_provider is None:
             return {
@@ -122,16 +130,22 @@ class IPCBridge:
                 "clients": len(self.clients),
                 "pendingApprovals": len(self._pending_approvals),
                 "state": snapshot.get("state", "idle"),
-            }
+            },
+            headers=self._cors_headers(),
         )
 
     async def _handle_shell_snapshot(self, _request: web.Request) -> web.Response:
         snapshot = await self._resolve_snapshot()
-        return web.json_response(snapshot)
+        return web.json_response(snapshot, headers=self._cors_headers())
+
+    async def _handle_options(self, _request: web.Request) -> web.Response:
+        return web.Response(status=204, headers=self._cors_headers())
 
     async def _start_http_server(self) -> None:
         app = web.Application()
+        app.router.add_options("/health", self._handle_options)
         app.router.add_get("/health", self._handle_health)
+        app.router.add_options("/shell_snapshot", self._handle_options)
         app.router.add_get("/shell_snapshot", self._handle_shell_snapshot)
         runner = web.AppRunner(app)
         await runner.setup()

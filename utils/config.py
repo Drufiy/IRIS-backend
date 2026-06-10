@@ -24,7 +24,7 @@ def load_config(settings_path: str = "configs/settings.yaml") -> dict:
     if not settings_file.exists():
         raise FileNotFoundError(f"Settings file not found: {settings_path}")
 
-    with settings_file.open("r") as f:
+    with settings_file.open("r", encoding="utf-8") as f:
         config: dict = yaml.safe_load(f)
 
     # Load .env file if present
