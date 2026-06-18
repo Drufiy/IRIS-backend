@@ -13,6 +13,7 @@ except ImportError:  # pragma: no cover - exercised only in dependency-light env
     np = None
 
 INTERRUPT_PHRASES = ["stop", "cancel", "enough", "shut up", "pause"]
+STOP_STATES = {"IDLE", "STOPPING", "ERROR"}
 
 
 class IRISEventLoop:
@@ -241,5 +242,6 @@ class IRISEventLoop:
         self.tts.stop()
         if self._current_task and not self._current_task.done():
             self._current_task.cancel()
-        await self.state.transition(IRISState.STOPPING)
+        target_state = IRISState.STOPPING if getattr(self.state, "current", None) not in STOP_STATES else IRISState.IDLE
+        await self.state.transition(target_state)
         logger.info("IRIS stopped")
