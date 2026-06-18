@@ -10,9 +10,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install core dependencies
+      - name: Install dependencies
         run: |
-          pip install numpy pytest loguru httpx pyyaml python-dotenv aiofiles websockets
+          pip install -r requirements.txt
       - name: Run core tests
         run: |
           python -m pytest tests/ -v \
