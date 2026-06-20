@@ -92,8 +92,8 @@ async def run_shell(command: str, timeout: int = 30) -> dict:
         parts = shlex.split(command, posix=os.name != "nt")
         if not parts:
             return {"status": "blocked", "result": "Empty commands are not allowed."}
-        proc = await asyncio.create_subprocess_exec(
-            *parts,
+        proc = await asyncio.create_subprocess_shell(
+            command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

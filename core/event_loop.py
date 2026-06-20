@@ -242,5 +242,5 @@ class IRISEventLoop:
         self.tts.stop()
         if self._current_task and not self._current_task.done():
             self._current_task.cancel()
-        await self.state.transition(IRISState.IDLE)
+        await self.state.transition(IRISState.STOPPING)
         logger.info("IRIS stopped")
