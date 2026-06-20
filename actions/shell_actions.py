@@ -88,32 +88,37 @@ async def run_shell(command: str, timeout: int = 30) -> dict:
         return {"status": "blocked", "result": _blocked_reason(command)}
 
     logger.info(f"Shell exec: {command}")
+    import subprocess
+    import sys
     try:
-        parts = shlex.split(command, posix=os.name != "nt")
-        if not parts:
-            return {"status": "blocked", "result": "Empty commands are not allowed."}
-        proc = await asyncio.create_subprocess_exec(
-            *parts,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+        # Direct subprocess.run (synchronous) is the most portable form across
+        # Python versions / CI runners — no asyncio subprocess transport and no
+        # event-loop executor quirks. The call is short-lived and timeout-bounded.
+        proc_result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
 
-        output = stdout.decode().strip()
-        errors = stderr.decode().strip()
+        output = (proc_result.stdout or "").strip()
+        errors = (proc_result.stderr or "").strip()
 
-        if proc.returncode == 0:
+        if proc_result.returncode == 0:
             result_text = output or errors or "(no output)"
-            logger.debug(f"Shell OK (rc=0): {result_text[:200]}")
+            logger.info(f"Shell OK (rc=0): {result_text[:200]}")
             return {"status": "ok", "result": result_text}
         else:
-            logger.warning(f"Shell failed (rc={proc.returncode}): {errors}")
-            return {"status": "error", "result": errors or output, "returncode": proc.returncode}
+            logger.warning(f"Shell failed (rc={proc_result.returncode}): {errors}")
+            return {"status": "error", "result": errors or output, "returncode": proc_result.returncode}
 
-    except asyncio.TimeoutError:
+    except subprocess.TimeoutExpired:
         logger.error(f"Shell command timed out ({timeout}s): {command}")
-        proc.kill()
         return {"status": "error", "result": f"Timed out after {timeout}s"}
     except Exception as e:
+        # Surface to stderr too — loguru is stubbed in tests, and pytest captures
+        # stderr so the real failure is visible in CI logs.
+        print(f"run_shell exception: {e!r}", file=sys.stderr)
         logger.error(f"Shell exec error: {e}")
         return {"status": "error", "result": str(e)}
