@@ -3,6 +3,7 @@
 import asyncio
 import os
 import shlex
+import subprocess
 from loguru import logger
 
 BLOCKED_COMMANDS = {"rm -rf /", "mkfs", "dd if=/dev/zero", ":(){:|:&};:"}
@@ -92,27 +93,32 @@ async def run_shell(command: str, timeout: int = 30) -> dict:
         parts = shlex.split(command, posix=os.name != "nt")
         if not parts:
             return {"status": "blocked", "result": "Empty commands are not allowed."}
-        proc = await asyncio.create_subprocess_exec(
-            *parts,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            ),
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
 
-        output = stdout.decode().strip()
-        errors = stderr.decode().strip()
+        output = result.stdout.strip()
+        errors = result.stderr.strip()
 
-        if proc.returncode == 0:
+        if result.returncode == 0:
             result_text = output or errors or "(no output)"
             logger.debug(f"Shell OK (rc=0): {result_text[:200]}")
             return {"status": "ok", "result": result_text}
         else:
-            logger.warning(f"Shell failed (rc={proc.returncode}): {errors}")
-            return {"status": "error", "result": errors or output, "returncode": proc.returncode}
+            logger.warning(f"Shell failed (rc={result.returncode}): {errors}")
+            return {"status": "error", "result": errors or output, "returncode": result.returncode}
 
-    except asyncio.TimeoutError:
+    except subprocess.TimeoutExpired:
         logger.error(f"Shell command timed out ({timeout}s): {command}")
-        proc.kill()
         return {"status": "error", "result": f"Timed out after {timeout}s"}
     except Exception as e:
         logger.error(f"Shell exec error: {e}")
