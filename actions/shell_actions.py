@@ -88,22 +88,22 @@ async def run_shell(command: str, timeout: int = 30) -> dict:
         return {"status": "blocked", "result": _blocked_reason(command)}
 
     logger.info(f"Shell exec: {command}")
+    import subprocess
+    import sys
     try:
-        import subprocess
-        loop = asyncio.get_event_loop()
-        proc_result = await loop.run_in_executor(
-            None,
-            lambda: subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            ),
+        # Direct subprocess.run (synchronous) is the most portable form across
+        # Python versions / CI runners — no asyncio subprocess transport and no
+        # event-loop executor quirks. The call is short-lived and timeout-bounded.
+        proc_result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
         )
 
-        output = proc_result.stdout.strip()
-        errors = proc_result.stderr.strip()
+        output = (proc_result.stdout or "").strip()
+        errors = (proc_result.stderr or "").strip()
 
         if proc_result.returncode == 0:
             result_text = output or errors or "(no output)"
@@ -117,5 +117,8 @@ async def run_shell(command: str, timeout: int = 30) -> dict:
         logger.error(f"Shell command timed out ({timeout}s): {command}")
         return {"status": "error", "result": f"Timed out after {timeout}s"}
     except Exception as e:
+        # Surface to stderr too — loguru is stubbed in tests, and pytest captures
+        # stderr so the real failure is visible in CI logs.
+        print(f"run_shell exception: {e!r}", file=sys.stderr)
         logger.error(f"Shell exec error: {e}")
         return {"status": "error", "result": str(e)}
