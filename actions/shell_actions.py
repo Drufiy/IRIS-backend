@@ -107,7 +107,7 @@ async def run_shell(command: str, timeout: int = 30) -> dict:
 
         if proc_result.returncode == 0:
             result_text = output or errors or "(no output)"
-            logger.debug(f"Shell OK (rc=0): {result_text[:200]}")
+            logger.info(f"Shell OK (rc=0): {result_text[:200]}")
             return {"status": "ok", "result": result_text}
         else:
             logger.warning(f"Shell failed (rc={proc_result.returncode}): {errors}")
